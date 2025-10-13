@@ -1,0 +1,54 @@
+# Configuration Mistral AI API
+mistral:
+  # Obtenez votre clé API sur: https://console.mistral.ai/api-keys/
+  api_key: "xiIZeHKEkdJHh72eLzDQvFuQnKgDg5im"
+  
+  # Modèles disponibles: 
+  # - mistral-tiny (moins cher, rapide)
+  # - mistral-small (équilibre)
+  # - mistral-medium (haute qualité)
+  # - mistral-large-latest (meilleure qualité)
+  model: "mistral-large-latest"
+  
+  # Paramètres du modèle
+  temperature: 0.7
+  max_tokens: 2000
+  top_p: 0.9
+
+# Configuration du système IA
+ai_system:
+  # Langue pour les réponses
+  language: "fr"
+  
+  # Style des réponses
+  response_style: "scientific"
+  ttyty
+  # Niveau de détail
+  detail_level: "detailed"
+  
+  # Historique des missions
+  max_history_entries: 100
+  auto_export: true
+  export_path: "/tmp/ree_mission_history"
+
+# Configuration ROS2
+ros2:
+  # Topics d'entrée
+  input_topics:
+    mineral_data: "/mineral_discoveries"
+    exploration_data: "/exploration/status" 
+    robot_positions: "/robot_positions"
+    spectral_data: "/spectral/analysis"
+  
+  # Topics de sortie
+  output_topics:
+    ai_analysis: "/ai/analysis"
+    ai_advice: "/ai/advice"
+    ai_reports: "/ai/reports"
+    science_insights: "/ai/science_insights"
+  
+  # Fréquences de publication
+  publish_rates:
+    analysis: 5.0  # secondes
+    advice: 10.0   # secondes
+    reports: 60.0  # secondes
