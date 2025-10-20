@@ -44,8 +44,7 @@ setup(
     entry_points={
         'console_scripts': [
              'science_ai_system = generative_ai_layer.science_ai_system:main',
-#            'voice_interface = generative_ai_layer.voice_interface:main',
-#            'ai_mission_controller = generative_ai_layer.science_ai_system:main',
-        ],
+             ],
     },
 )
+

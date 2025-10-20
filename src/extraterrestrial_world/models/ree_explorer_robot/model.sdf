@@ -1,220 +1,260 @@
 <?xml version="1.0"?>
-<sdf version="1.9">
-  <world name="moon_array">
-    <!-- Physics -->
-    <plugin filename="gz-sim-physics-system" name="gz::sim::systems::Physics" />
-    <physics name="dedfault_physics" type="ignored">
-      <max_step_size>0.025</max_step_size>
-      <real_time_factor>1.0</real_time_factor>
-    </physics>
+<sdf version="1.7">
+  <model name="ree_explorer_robot">
+    
+    <!-- Châssis principal -->
+    <link name="chassis">
+      <pose>0 0 0.15 0 0 0</pose>
+      <collision name="collision">
+        <geometry>
+          <box>
+            <size>0.5 0.3 0.15</size>
+          </box>
+        </geometry>
+        <surface>
+          <friction>
+            <ode>
+              <mu>100</mu>
+              <mu2>50</mu2>
+            </ode>
+          </friction>
+        </surface>
+      </collision>
+      <visual name="visual">
+        <geometry>
+          <box>
+            <size>0.5 0.3 0.15</size>
+          </box>
+        </geometry>
+        <material>
+          <script>
+            <uri>file://media/materials/scripts/gazebo.material</uri>
+            <name>Gazebo/Blue</name>
+          </script>
+        </material>
+      </visual>
+      
+      <!-- Capteur IMU -->
+      <sensor type="imu" name="imu_sensor">
+        <always_on>true</always_on>
+        <update_rate>100</update_rate>
+        <imu>
+          <noise>
+            <type>gaussian</type>
+            <rate>
+              <mean>0.0</mean>
+              <stddev>0.0002</stddev>
+            </rate>
+          </noise>
+        </imu>
+      </sensor>
+    </link>
 
-    <!-- World plugins -->
-    <plugin filename="gz-sim-user-commands-system" name="gz::sim::systems::UserCommands" />
-    <plugin filename="gz-sim-scene-broadcaster-system" name="gz::sim::systems::SceneBroadcaster" />
-    <plugin filename="gz-sim-contact-system" name="gz::sim::systems::Contact" />
+    <!-- Roues -->
+    <link name="left_wheel">
+      <pose>0.15 0.1 0.05 0 0 0</pose>
+      <collision name="collision">
+        <geometry>
+          <cylinder>
+            <radius>0.08</radius>
+            <length>0.04</length>
+          </cylinder>
+        </geometry>
+        <surface>
+          <friction>
+            <ode>
+              <mu>100</mu>
+              <mu2>50</mu2>
+            </ode>
+          </friction>
+        </surface>
+      </collision>
+      <visual name="visual">
+        <geometry>
+          <cylinder>
+            <radius>0.08</radius>
+            <length>0.04</length>
+          </cylinder>
+        </geometry>
+        <material>
+          <script>
+            <uri>file://media/materials/scripts/gazebo.material</uri>
+            <name>Gazebo/Black</name>
+          </script>
+        </material>
+      </visual>
+    </link>
 
-    <!-- Moon gravity -->
-    <gravity>0.0 0.0 -1.622</gravity>
+    <link name="right_wheel">
+      <pose>0.15 -0.1 0.05 0 0 0</pose>
+      <collision name="collision">
+        <geometry>
+          <cylinder>
+            <radius>0.08</radius>
+            <length>0.04</length>
+          </cylinder>
+        </geometry>
+        <surface>
+          <friction>
+            <ode>
+              <mu>100</mu>
+              <mu2>50</mu2>
+            </ode>
+          </friction>
+        </surface>
+      </collision>
+      <visual name="visual">
+        <geometry>
+          <cylinder>
+            <radius>0.08</radius>
+            <length>0.04</length>
+          </cylinder>
+        </geometry>
+        <material>
+          <script>
+            <uri>file://media/materials/scripts/gazebo.material</uri>
+            <name>Gazebo/Black</name>
+          </script>
+        </material>
+      </visual>
+    </link>
 
-    <!-- Scene -->
-    <scene>
-      <ambient>0 0 0</ambient>
-      <background>0 0 0</background>
-      <grid>false</grid>
-    </scene>
+    <link name="left_back_wheel">
+      <pose>-0.15 0.1 0.05 0 0 0</pose>
+      <collision name="collision">
+        <geometry>
+          <cylinder>
+            <radius>0.08</radius>
+            <length>0.04</length>
+          </cylinder>
+        </geometry>
+        <surface>
+          <friction>
+            <ode>
+              <mu>100</mu>
+              <mu2>50</mu2>
+            </ode>
+          </friction>
+        </surface>
+      </collision>
+      <visual name="visual">
+        <geometry>
+          <cylinder>
+            <radius>0.08</radius>
+            <length>0.04</length>
+          </cylinder>
+        </geometry>
+        <material>
+          <script>
+            <uri>file://media/materials/scripts/gazebo.material</uri>
+            <name>Gazebo/Black</name>
+          </script>
+        </material>
+      </visual>
+    </link>
 
-    <!--             -->
-    <!-- GUI plugins -->
-    <!--             -->
-    <gui>
-      <plugin filename="MinimalScene" name="3D View">
-        <gz-gui>
-          <title>3D View</title>
-          <property type="bool" key="showTitleBar">false</property>
-          <property type="string" key="state">docked</property>
-        </gz-gui>
+    <link name="right_back_wheel">
+      <pose>-0.15 -0.1 0.05 0 0 0</pose>
+      <collision name="collision">
+        <geometry>
+          <cylinder>
+            <radius>0.08</radius>
+            <length>0.04</length>
+          </cylinder>
+        </geometry>
+        <surface>
+          <friction>
+            <ode>
+              <mu>100</mu>
+              <mu2>50</mu2>
+            </ode>
+          </friction>
+        </surface>
+      </collision>
+      <visual name="visual">
+        <geometry>
+          <cylinder>
+            <radius>0.08</radius>
+            <length>0.04</length>
+          </cylinder>
+        </geometry>
+        <material>
+          <script>
+            <uri>file://media/materials/scripts/gazebo.material</uri>
+            <name>Gazebo/Black</name>
+          </script>
+        </material>
+      </visual>
+    </link>
 
-        <engine>ogre2</engine>
-        <ambient_light>0 0 0</ambient_light>
-        <background_color>0 0 0</background_color>
-        <shadows>
-          <texture_size light_type="directional">8192</texture_size>
-        </shadows>
-        <camera_pose>-12.5 12.5 12.5 0 0.785 -0.785</camera_pose>
-      </plugin>
+    <!-- Joints -->
+    <joint type="revolute" name="left_wheel_joint">
+      <parent>chassis</parent>
+      <child>left_wheel</child>
+      <axis>
+        <xyz>0 1 0</xyz>
+        <limit>
+          <lower>-1e+16</lower>
+          <upper>1e+16</upper>
+        </limit>
+      </axis>
+    </joint>
 
-      <plugin filename="WorldControl" name="World control">
-        <gz-gui>
-          <title>World control</title>
-          <property type="bool" key="showTitleBar">false</property>
-          <property type="bool" key="resizable">false</property>
-          <property type="double" key="height">72</property>
-          <property type="double" key="width">121</property>
-          <property type="double" key="z">1</property>
+    <joint type="revolute" name="right_wheel_joint">
+      <parent>chassis</parent>
+      <child>right_wheel</child>
+      <axis>
+        <xyz>0 1 0</xyz>
+        <limit>
+          <lower>-1e+16</lower>
+          <upper>1e+16</upper>
+        </limit>
+      </axis>
+    </joint>
 
-          <property type="string" key="state">floating</property>
-          <anchors target="3D View">
-            <line own="left" target="left" />
-            <line own="bottom" target="bottom" />
-          </anchors>
-        </gz-gui>
+    <joint type="revolute" name="left_back_wheel_joint">
+      <parent>chassis</parent>
+      <child>left_back_wheel</child>
+      <axis>
+        <xyz>0 1 0</xyz>
+        <limit>
+          <lower>-1e+16</lower>
+          <upper>1e+16</upper>
+        </limit>
+      </axis>
+    </joint>
 
-        <play_pause>true</play_pause>
-        <step>true</step>
-        <start_paused>true</start_paused>
-        <use_event>true</use_event>
-      </plugin>
+    <joint type="revolute" name="right_back_wheel_joint">
+      <parent>chassis</parent>
+      <child>right_back_wheel</child>
+      <axis>
+        <xyz>0 1 0</xyz>
+        <limit>
+          <lower>-1e+16</lower>
+          <upper>1e+16</upper>
+        </limit>
+      </axis>
+    </joint>
 
-      <plugin filename="WorldStats" name="World stats">
-        <gz-gui>
-          <title>World stats</title>
-          <property type="bool" key="showTitleBar">false</property>
-          <property type="bool" key="resizable">false</property>
-          <property type="double" key="height">110</property>
-          <property type="double" key="width">290</property>
-          <property type="double" key="z">1</property>
+    <!-- Plugin de contrôle différentiel Gazebo Classic -->
+    <plugin name="differential_drive" filename="libgazebo_ros_diff_drive.so">
+      <command_topic>cmd_vel</command_topic>
+      <odometry_topic>odom</odometry_topic>
+      <odometry_frame>odom</odometry_frame>
+      <robot_base_frame>chassis</robot_base_frame>
+      <publish_odom>true</publish_odom>
+      <publish_odom_tf>true</publish_odom_tf>
+      <publish_wheel_tf>true</publish_wheel_tf>
+      <legacy_mode>false</legacy_mode>
+      <update_rate>30</update_rate>
+      <left_joint>left_wheel_joint</left_joint>
+      <right_joint>right_wheel_joint</right_joint>
+      <wheel_separation>0.2</wheel_separation>
+      <wheel_diameter>0.16</wheel_diameter>
+      <wheel_acceleration>0.5</wheel_acceleration>
+      <wheel_torque>10</wheel_torque>
+      <odometry_source>world</odometry_source>
+    </plugin>
 
-          <property type="string" key="state">floating</property>
-          <anchors target="3D View">
-            <line own="right" target="right" />
-            <line own="bottom" target="bottom" />
-          </anchors>
-        </gz-gui>
-
-        <sim_time>true</sim_time>
-        <real_time>true</real_time>
-        <real_time_factor>true</real_time_factor>
-        <iterations>true</iterations>
-      </plugin>
-
-      <plugin filename="ResourceSpawner" name="Resource Spawner" />
-    </gui>
-
-    <!--              -->
-    <!-- Illumination -->
-    <!--              -->
-    <light type="directional" name="sun">
-      <cast_shadows>true</cast_shadows>
-      <pose>0 0 100.0 0 0 0</pose>
-      <diffuse>1.0 1.0 1.0 1</diffuse>
-      <specular>0.2 0.2 0.2 1</specular>
-      <intensity>5</intensity>
-      <attenuation>
-        <range>1000</range>
-        <constant>0.9</constant>
-        <linear>0.01</linear>
-        <quadratic>0.001</quadratic>
-      </attenuation>
-      <direction>-0.5 0.25 -0.1</direction>
-    </light>
-
-    <!--        -->
-    <!-- Models -->
-    <!--        -->
-
-    <!-- Terrains -->
-    <include>
-      <uri>
-        model://lunar_surface1
-      </uri>
-      <pose>-11.0 -11.0 0 0 0 0</pose>
-      <static>true</static>
-    </include>
-    <include>
-      <uri>
-        model://lunar_surface2
-      </uri>
-      <pose>-11.0 11.0 0 0 0 0</pose>
-      <static>true</static>
-    </include>
-    <include>
-      <uri>
-        model://lunar_surface3
-      </uri>
-      <pose>11.0 -11.0 0 0 0 0</pose>
-      <static>true</static>
-    </include>
-    <include>
-      <uri>
-        model://lunar_surface4
-      </uri>
-      <pose>11.0 11.0 0 0 0 0</pose>
-      <static>true</static>
-    </include>
-
-    <!-- Objects -->
-    <include>
-      <uri>
-        model://solar_panel0
-      </uri>
-      <name>solar_panel0</name>
-      <pose>3.8 5.2 0.85 0 0 0</pose>
-      <static>true</static>
-    </include>
-    <include>
-      <uri>
-        model://solar_panel0
-      </uri>
-      <name>solar_panel1</name>
-      <pose>3.8 5.55 0.85 0 0 0</pose>
-      <static>true</static>
-    </include>
-    <include>
-      <uri>
-        model://solar_panel0
-      </uri>
-      <name>solar_panel2</name>
-      <pose>3.8 5.9 0.85 0 0 0</pose>
-      <static>true</static>
-    </include>
-    <include>
-      <uri>
-        model://solar_panel0
-      </uri>
-      <name>solar_panel3</name>
-      <pose>3.35 5.2 0.85 0 0 0</pose>
-      <static>true</static>
-    </include>
-    <include>
-      <uri>
-        model://solar_panel0
-      </uri>
-      <name>solar_panel4</name>
-      <pose>3.35 5.55 0.85 0 0 0</pose>
-      <static>true</static>
-    </include>
-    <include>
-      <uri>
-        model://solar_panel0
-      </uri>
-      <name>solar_panel5</name>
-      <pose>3.35 5.9 0.85 0 0 0</pose>
-      <static>true</static>
-    </include>
-    <include>
-      <uri>
-        model://solar_panel0
-      </uri>
-      <name>solar_panel6</name>
-      <pose>2.9 5.2 0.85 0 0 0</pose>
-      <static>true</static>
-    </include>
-    <include>
-      <uri>
-        model://solar_panel0
-      </uri>
-      <name>solar_panel7</name>
-      <pose>2.9 5.55 0.85 0 0 0</pose>
-      <static>true</static>
-    </include>
-    <include>
-      <uri>
-        model://solar_panel0
-      </uri>
-      <name>solar_panel8</name>
-      <pose>2.45 5.2 0.85 0 0 0</pose>
-      <static>true</static>
-    </include>
-
-  </world>
+  </model>
 </sdf>
