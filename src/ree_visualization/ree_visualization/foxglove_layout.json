@@ -1,0 +1,127 @@
+{
+  "layout": {
+    "first": "3D View",
+    "second": {
+      "first": {
+        "first": "Robot Dashboard",
+        "second": "Mineral Heatmap"
+      },
+      "second": {
+        "first": "System Statistics",
+        "second": "Exploration Log"
+      }
+    }
+  },
+  "globalVariables": [],
+  "userNodes": {},
+  "linkedGlobalVariables": [],
+  "playbackConfig": {
+    "messageOrder": "receiveTime",
+    "speed": 1.0
+  },
+  "panels": {
+    "3D View": {
+      "title": "3D Exploration View",
+      "type": "3D",
+      "config": {
+        "autoTextBackground": true,
+        "cameraState": {
+          "distance": 120,
+          "perspective": true,
+          "phi": 1.2,
+          "targetOffset": [50, 50, 0],
+          "thetaOffset": 0.5,
+          "target": [50, 50, 0],
+          "targetOrientation": [0, 0, 0, 1],
+          "fovy": 0.75
+        },
+        "followMode": "follow-none",
+        "followTf": "map",
+        "layers": {
+          "grid": {
+            "layerId": "grid",
+            "visible": true,
+            "frameLock": true,
+            "color": "#2D3748",
+            "size": 100
+          },
+          "pose": {
+            "layerId": "pose",
+            "visible": true
+          }
+        },
+        "scene": {
+          "transforms": {
+            "editable": true,
+            "label": {
+              "show": true,
+              "size": 0.2,
+              "color": "#FFFFFF"
+            }
+          }
+        },
+        "topics": {
+          "/foxglove/robot_markers": {
+            "visible": true
+          },
+          "/foxglove/mineral_markers": {
+            "visible": true
+          },
+          "/foxglove/mineral_cloud": {
+            "visible": true,
+            "pointSize": 3,
+            "pointShape": "circle",
+            "decayTime": 0
+          }
+        },
+        "transforms": {
+          "editable": true,
+          "label": {
+            "show": true
+          }
+        }
+      }
+    },
+    "Robot Dashboard": {
+      "title": "🤖 Robot Dashboard",
+      "type": "Table",
+      "config": {
+        "topic": "/foxglove/robot_data",
+        "timestampMethod": "receiveTime"
+      }
+    },
+    "Mineral Heatmap": {
+      "title": "💎 Mineral Heatmap",
+      "type": "Image",
+      "config": {
+        "topic": "/mineral_map",
+        "colorMode": "gradient",
+        "colormap": "turbo",
+        "flipHorizontal": false,
+        "flipVertical": false,
+        "maxValue": 1.0,
+        "minValue": 0.0,
+        "rotation": 0,
+        "smooth": true
+      }
+    },
+    "System Statistics": {
+      "title": "📊 System Statistics",
+      "type": "Table",
+      "config": {
+        "topic": "/foxglove/system_stats",
+        "timestampMethod": "receiveTime"
+      }
+    },
+    "Exploration Log": {
+      "title": "📝 Exploration Log",
+      "type": "Log",
+      "config": {
+        "topic": "/rosout",
+        "searchTerms": ["mineral", "REE", "robot", "discovery", "cleaned", "high-value"],
+        "minLogLevel": 1,
+        "messageRate": 100
+      }
+    }
+  }
+}

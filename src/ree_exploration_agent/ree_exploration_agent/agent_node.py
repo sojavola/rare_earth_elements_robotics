@@ -1,38 +1,505 @@
+#!/usr/bin/env python3
+# agent_node.py — corrected, logging enabled, ROS2 (rclpy)
+
 import rclpy
-import sys
 from rclpy.node import Node
-from .advanced_dqn_agent import AdvancedDQNAgent
-from .science_reward_system import ScienceRewardSystem
+import numpy as np
+import threading
+import time
+import random
+import sys
+import os
+import json
+import re
+from datetime import datetime
 
-class AgentNode(Node):
-    def __init__(self, robot_id=0):
-        super().__init__(f'agent_node_{robot_id}')
-        self.robot_id = robot_id
-        
-        # Initialiser l'agent DQN et le système de récompenses
-        state_shape = (100, 172, 4)  # À adapter selon vos besoins
-        self.dqn_agent = AdvancedDQNAgent(state_shape, num_actions=8)
-        self.reward_system = ScienceRewardSystem()
-        
-        self.get_logger().info(f'Agent Node {robot_id} initialized')
+import pandas as pd  # <- for saving logs
+from std_msgs.msg import Float32MultiArray, String, Int32, Float32
+from geometry_msgs.msg import Pose2D, Twist
+from nav_msgs.msg import OccupancyGrid
 
-def main():
-    rclpy.init()
-    
-    # Récupérer l'ID du robot depuis les arguments
+# Import de ton agent DQN (assure-toi que ce module existe dans le package)
+from .advanced_dqn_agent import RobustDQNAgent
+
+
+class REEExplorationAgent(Node):
+    def __init__(self, robot_id: int = 0):
+        super().__init__(f'ree_exploration_agent_{robot_id}')
+
+        # --- Identification du robot ---
+        self.robot_id = int(robot_id)
+        self.agent_name = f'robot_{self.robot_id}'
+        self.get_logger().info(f'🎯 ROBOT ID DÉFINI: {self.robot_id}')
+        self.get_logger().debug(f'📝 sys.argv: {sys.argv}')
+
+        # --- Configuration (modifiable) ---
+        self.map_width = 100
+        self.map_height = 100
+        self.num_actions = 8
+        self.state_shape = (self.map_height, self.map_width, 4)  # 4 channels pour minéraux
+        self.decision_hz = 1.0
+        self.train_hz = 2.0
+
+        # --- États / cartes ---
+        self.mineral_map = np.zeros((self.map_height, self.map_width, 4), dtype=np.float32)
+        self.obstacle_map = np.zeros((self.map_height, self.map_width), dtype=np.int8)
+        self.science_targets = np.zeros((self.map_height, self.map_width), dtype=np.float32)
+        self.current_position = self.get_initial_position()
+        self.last_position = self.current_position
+
+        # --- Statistiques ---
+        self.steps = 0
+        self.episodes = 0  # will count completed episodes
+        self.total_reward = 0.0
+        self.episode_reward = 0.0
+        self.minerals_collected = 0
+        self.unique_minerals_found = set()
+        self.episode_memory = []
+        self.global_step_count = 0
+        self.latest_loss = 0.0
+
+        # --- Training logs (for plotting later) ---
+        self.training_logs = {
+            "episode": [],
+            "reward": [],
+            "steps": []
+        }
+
+        # --- Thread lock pour sécurité ---
+        self.lock = threading.Lock()
+
+        # --- Création de l'agent DQN (assume that RobustDQNAgent exists) ---
+        self.get_logger().info('🧠 Initializing DQN agent...')
+        self.agent = RobustDQNAgent(
+            state_shape=self.state_shape,
+            num_actions=self.num_actions,
+            robot_id=self.robot_id,
+            learning_rate=0.00025,
+            gamma=0.99,
+            epsilon=1.0,
+            epsilon_min=0.01,
+            epsilon_decay=0.998,
+            memory_size=1000,
+            batch_size=32,
+            target_update=1000,
+            load_latest_model=True,
+            use_shared_model=True
+        )
+        self.get_logger().info(f'🧠 DQN initialized: state_shape={self.state_shape}, actions={self.num_actions}')
+
+        # --- Publishers ---
+        self.dqn_update_pub = self.create_publisher(Float32MultiArray, '/agent/dqn_update', 10)
+        self.step_completed_pub = self.create_publisher(Int32, '/agent/step_completed', 10)
+        self.epsilon_pub = self.create_publisher(Float32, '/agent/epsilon', 10)
+
+        self.position_pub = self.create_publisher(Pose2D, f'/{self.agent_name}/position', 10)
+        self.velocity_pub = self.create_publisher(Twist, f'/{self.agent_name}/cmd_vel', 10)
+        self.cleaning_pub = self.create_publisher(Float32MultiArray, f'/{self.agent_name}/cleaning_action', 10)
+        self.status_pub = self.create_publisher(String, f'/{self.agent_name}/status', 10)
+        self.discovery_pub = self.create_publisher(Float32MultiArray, '/shared_discoveries', 10)
+
+        # --- Subscribers (callbacks référencées correctement) ---
+        self.mineral_sub = self.create_subscription(Float32MultiArray, '/mineral_map', self.mineral_callback, 10)
+        self.obstacle_sub = self.create_subscription(OccupancyGrid, '/obstacle_map', self.obstacle_callback, 10)
+        self.science_sub = self.create_subscription(Float32MultiArray, '/science_targets', self.science_callback, 10)
+
+        # Global coordination topics
+        self.global_step_sub = self.create_subscription(Int32, '/global/step_count', self.global_step_callback, 10)
+        self.model_update_sub = self.create_subscription(String, '/global/model_update', self.model_update_callback, 10)
+        self.global_epsilon_sub = self.create_subscription(Float32, '/global/epsilon', self.global_epsilon_callback, 10)
+
+        # --- Timers (decisions, training, status, position) ---
+        self.decision_timer = self.create_timer(1.0 / self.decision_hz, self.make_decision)
+        self.training_timer = self.create_timer(1.0 / self.train_hz, self.train_agent)
+        self.status_timer = self.create_timer(5.0, self.publish_status)
+        self.position_timer = self.create_timer(0.5, self.publish_position)
+
+        # --- Dirs de sauvegarde modèles ---
+        self.save_dir = os.path.join("models", f"robot_{self.robot_id}")
+        os.makedirs(self.save_dir, exist_ok=True)
+
+        # Vérification modèle partagé (si présent)
+        self.verify_model_sharing()
+
+        self.get_logger().info(f'🚀 DQN Agent Node {self.robot_id} initialized at position {self.current_position}')
+
+    # -------------------- Callbacks (méthodes de classe) --------------------
+    def global_step_callback(self, msg: Int32):
+        """Met à jour le compteur global depuis le coordinateur"""
+        self.global_step_count = int(msg.data)
+        if hasattr(self.agent, 'shared_manager') and self.agent.shared_manager is not None:
+            try:
+                self.agent.shared_manager.global_step_count = self.global_step_count
+            except Exception:
+                pass
+
+    def model_update_callback(self, msg: String):
+        """Reçoit les mises à jour du modèle (format JSON attendu)"""
+        try:
+            data = json.loads(msg.data)
+            ver = data.get("model_version", "unknown")
+            self.get_logger().info(f'🔄 Model sync: Version {ver}')
+        except Exception:
+            self.get_logger().warn('⚠️ model_update: cannot parse JSON')
+
+    def global_epsilon_callback(self, msg: Float32):
+        """Synchronise epsilon avec les autres robots"""
+        try:
+            self.agent.epsilon = float(msg.data)
+            self.get_logger().debug(f'ε synchronized -> {self.agent.epsilon:.4f}')
+        except Exception:
+            pass
+
+    # -------------------- Subscribers pour cartes --------------------
+    def mineral_callback(self, msg: Float32MultiArray):
+        """Callback pour la carte minérale"""
+        with self.lock:
+            data = np.array(msg.data, dtype=np.float32)
+            if data.size == self.map_height * self.map_width * 4:
+                self.mineral_map = data.reshape(self.map_height, self.map_width, 4)
+
+    def obstacle_callback(self, msg: OccupancyGrid):
+        """Callback pour la carte d'obstacles (OccupancyGrid => flatten)"""
+        with self.lock:
+            data = np.array(msg.data, dtype=np.int8)
+            if data.size == self.map_height * self.map_width:
+                self.obstacle_map = data.reshape(self.map_height, self.map_width)
+
+    def science_callback(self, msg: Float32MultiArray):
+        """Callback pour les cibles scientifiques"""
+        with self.lock:
+            data = np.array(msg.data, dtype=np.float32)
+            if data.size == self.map_height * self.map_width:
+                self.science_targets = data.reshape(self.map_height, self.map_width)
+
+    # -------------------- Core logic --------------------
+    def get_initial_position(self):
+        """Retourne une position initiale valide (évite les bords)"""
+        return (random.randint(5, self.map_width - 6), random.randint(5, self.map_height - 6))
+
+    def get_current_state(self):
+        """Retourne l'état actuel utilisé par le DQN"""
+        with self.lock:
+            normalized_mineral_map = self.mineral_map.copy()
+            normalized_position = (self.current_position[0] / self.map_width,
+                                   self.current_position[1] / self.map_height)
+            return (normalized_mineral_map, normalized_position)
+
+    def make_decision(self):
+        """Prend une décision de mouvement avec le DQN"""
+        # Protection : attendre la carte minérale
+        if np.max(self.mineral_map) == 0:
+            return
+
+        state = self.get_current_state()
+        action = self.agent.choose_action(state)
+
+        reward, done = self.execute_action(action)
+        next_state = self.get_current_state()
+
+        # Stocker l'expérience
+        try:
+            self.agent.store_experience(state, action, reward, next_state, done)
+        except Exception as e:
+            self.get_logger().warn(f'⚠️ store_experience failed: {e}')
+
+        self.episode_memory.append((state, action, reward, next_state, done))
+
+        # Mettre à jour les statistiques
+        self.episode_reward += reward
+        self.total_reward += reward
+        self.steps += 1
+
+        # Fin d'épisode
+        if done or self.steps >= 500:
+            # --- Avant de reset l'épisode : enregistrer les metrics pour ce qui vient d'être complété ---
+            episode_index = self.episodes + 1  # upcoming episode number (1-based)
+            self.training_logs["episode"].append(episode_index)
+            self.training_logs["reward"].append(self.episode_reward)
+            self.training_logs["steps"].append(self.steps)
+
+            # Sauvegarde périodique (tous les 50 épisodes)
+            if episode_index % 20 == 0:
+                self.save_training_logs()
+
+            # Terminer et reset
+            self.end_episode()
+
+        if self.steps % 10 == 0:
+            self.get_logger().debug(f'🎯 Step {self.steps}: Action {action}, Reward {reward:.2f}, ε={self.agent.epsilon:.3f}')
+
+    def execute_action(self, action: int):
+        """Exécute une action et retourne (reward, done)"""
+        x, y = self.current_position
+        direction_vectors = [
+            (0, 1),    # 0: Nord
+            (0, -1),   # 1: Sud
+            (-1, 0),   # 2: Ouest
+            (1, 0),    # 3: Est
+            (-1, 1),   # 4: Nord-Ouest
+            (1, 1),    # 5: Nord-Est
+            (-1, -1),  # 6: Sud-Ouest
+            (1, -1)    # 7: Sud-Est
+        ]
+        dx, dy = direction_vectors[int(action) % len(direction_vectors)]
+        new_x = max(0, min(self.map_width - 1, x + dx))
+        new_y = max(0, min(self.map_height - 1, y + dy))
+
+        if self.is_valid_position(new_x, new_y):
+            self.last_position = self.current_position
+            self.current_position = (new_x, new_y)
+            reward = self.calculate_reward(new_x, new_y)
+            done = self.is_episode_done()
+            self.publish_cleaning_action(new_x, new_y)
+            if reward > 5.0:
+                self.publish_discovery(new_x, new_y)
+        else:
+            reward = -2.0
+            done = False
+
+        # Optionnel: publier la commande de vitesse pour la simulation (faible vitesse)
+        self.publish_velocity(linear_x=0.1, angular_z=0.0)
+        return reward, done
+
+    def is_valid_position(self, x, y):
+        with self.lock:
+            return (0 <= x < self.map_width and 0 <= y < self.map_height and int(self.obstacle_map[y, x]) == 0)
+
+    def calculate_reward(self, x, y):
+        reward = 0.0
+        with self.lock:
+            mineral_concentrations = self.mineral_map[y, x, :]
+            max_concentration = float(np.max(mineral_concentrations))
+            if max_concentration > 0.1:
+                mineral_reward = max_concentration * 10.0
+                reward += mineral_reward
+                if max_concentration > 0.7:
+                    reward += 5.0
+                    self.minerals_collected += 1
+                    mineral_type = int(np.argmax(mineral_concentrations))
+                    self.unique_minerals_found.add(mineral_type)
+                    self.get_logger().info(f'💎 High-value mineral found! Type: {mineral_type}, Conc: {max_concentration:.2f}')
+            if self.science_targets[y, x] > 0.3:
+                reward += float(self.science_targets[y, x]) * 3.0
+            reward += 0.1
+            if self.current_position == self.last_position:
+                reward -= 0.5
+        return reward
+
+    def is_episode_done(self):
+        if self.steps > 50 and self.episode_reward < 1.0:
+            return True
+        if self.minerals_collected >= 5:
+            return True
+        return False
+
+    # -------------------- Training & model sync --------------------
+    def train_agent(self):
+        """Entraîne l'agent DQN si possible et publie update"""
+        try:
+            if len(self.agent.memory) >= self.agent.batch_size:
+                loss = self.agent.train()
+                self.latest_loss = float(loss) if loss is not None else 0.0
+
+                # Publier mise à jour DQN périodiquement
+                self.publish_dqn_update(self.latest_loss)
+                if self.steps % 50 == 0:
+                    self.get_logger().info(f'📚 Training - Loss: {self.latest_loss:.4f}, Memory: {len(self.agent.memory)}')
+        except Exception as e:
+            self.get_logger().error(f'❌ train_agent failed: {e}')
+
+    def publish_dqn_update(self, loss: float = 0.0):
+        """Publier les stats d'entraînement sur /agent/dqn_update"""
+        try:
+            update_msg = Float32MultiArray()
+            update_msg.data = [
+                float(self.robot_id),
+                float(loss),
+                float(self.agent.epsilon if hasattr(self.agent, 'epsilon') else 0.0),
+                float(len(self.agent.memory) if hasattr(self.agent, 'memory') else 0),
+                float(self.global_step_count)
+            ]
+            self.dqn_update_pub.publish(update_msg)
+
+            step_msg = Int32()
+            step_msg.data = int(self.global_step_count)
+            self.step_completed_pub.publish(step_msg)
+
+            epsilon_msg = Float32()
+            epsilon_msg.data = float(self.agent.epsilon if hasattr(self.agent, 'epsilon') else 0.0)
+            self.epsilon_pub.publish(epsilon_msg)
+        except Exception as e:
+            self.get_logger().warn(f'⚠️ publish_dqn_update failed: {e}')
+
+    # -------------------- Episode management --------------------
+    def end_episode(self):
+        """Termine l'épisode et sauvegarde si besoin"""
+        # increment episodes counter (episode just completed)
+        self.episodes += 1
+
+        # mettre à jour compteur global partagé
+        if hasattr(self.agent, 'shared_manager') and self.agent.shared_manager is not None:
+            try:
+                self.agent.shared_manager.global_episode_count += 1
+            except Exception:
+                pass
+
+        # Sauvegarde périodique du modèle
+        try:
+            if getattr(self.agent, 'use_shared_model', False):
+                if self.episodes % 5 == 0:
+                    model_path = os.path.join("models", "shared", f"shared_model_episode_{self.episodes}.pth")
+                    os.makedirs(os.path.dirname(model_path), exist_ok=True)
+                    self.agent.save_model(model_path)
+                    latest_path = os.path.join("models", "shared", "latest_shared_model.pth")
+                    self.agent.save_model(latest_path)
+                    self.get_logger().info(f'💾 Robot {self.robot_id}: Shared model saved (episode {self.episodes})')
+            else:
+                if self.episodes % 5 == 0:
+                    model_path = os.path.join(self.save_dir, f"model_episode_{self.episodes}.pth")
+                    os.makedirs(self.save_dir, exist_ok=True)
+                    self.agent.save_model(model_path)
+        except Exception as e:
+            self.get_logger().warn(f'⚠️ save_model error: {e}')
+
+        self.get_logger().info(f'📊 Episode {self.episodes} completed: Steps={self.steps}, Reward={self.episode_reward:.1f}, Minerals={self.minerals_collected}, ε={getattr(self.agent, "epsilon", 0):.3f}')
+
+        # reset variables for next episode
+        self.current_position = self.get_initial_position()
+        self.last_position = self.current_position
+        self.episode_reward = 0.0
+        self.steps = 0
+        self.minerals_collected = 0
+        self.episode_memory = []
+        self.get_logger().info(f'🔄 Starting new episode at {self.current_position}')
+
+    # -------------------- Publishers utilitaires --------------------
+    def publish_position(self):
+        msg = Pose2D()
+        msg.x = float(self.current_position[0])
+        msg.y = float(self.current_position[1])
+        msg.theta = 0.0
+        self.position_pub.publish(msg)
+
+    def publish_cleaning_action(self, x, y):
+        msg = Float32MultiArray()
+        msg.data = [float(x), float(y)]
+        self.cleaning_pub.publish(msg)
+
+    def publish_discovery(self, x, y):
+        msg = Float32MultiArray()
+        mineral_data = self.mineral_map[y, x, :].tolist()
+        msg.data = [float(self.robot_id), float(x), float(y)] + mineral_data
+        self.discovery_pub.publish(msg)
+
+    def publish_velocity(self, linear_x=0.1, angular_z=0.0):
+        msg = Twist()
+        msg.linear.x = linear_x
+        msg.angular.z = angular_z
+        self.velocity_pub.publish(msg)
+
+    def publish_status(self):
+        status_text = (f"Robot {self.robot_id} - Episode: {self.episodes}, Steps: {self.steps}, "
+                       f"EpisodeReward: {self.episode_reward:.1f}, Minerals: {self.minerals_collected}, ε: {getattr(self.agent, 'epsilon', 0):.3f}")
+        status_msg = String()
+        status_msg.data = status_text
+        self.status_pub.publish(status_msg)
+        # log périodique
+        if self.steps % 20 == 0:
+            self.get_logger().info(f'📈 {status_text}')
+
+    def verify_model_sharing(self):
+        """Vérifie si le 'shared_manager' existe et si le modèle est partagé"""
+        self.get_logger().info(f'🔍 Robot {self.robot_id} - Vérification modèle partagé...')
+        if hasattr(self.agent, 'shared_manager') and self.agent.shared_manager is not None:
+            manager = self.agent.shared_manager
+            try:
+                policy_id = id(self.agent.policy_net)
+                target_id = id(self.agent.target_net)
+                self.get_logger().info(f'   📊 Policy net ID: {policy_id}')
+                self.get_logger().info(f'   📊 Target net ID: {target_id}')
+                self.get_logger().info(f'   🤖 Robots enregistrés: {getattr(manager, "robot_ids", "unknown")}')
+                if not hasattr(manager, '_shared_model_id'):
+                    manager._shared_model_id = policy_id
+                    self.get_logger().info(f'   ✅ Référence établie par Robot {self.robot_id}')
+                else:
+                    if policy_id == manager._shared_model_id:
+                        self.get_logger().info('   ✅ MODÈLE PARTAGÉ CONFIRMÉ!')
+                    else:
+                        self.get_logger().error('   ❌ ERREUR: Modèle non partagé (IDs différents)')
+            except Exception as e:
+                self.get_logger().warn(f'⚠️ verify_model_sharing exception: {e}')
+        else:
+            self.get_logger().warn('   ⚠️ Pas de shared_manager détecté')
+
+    # -------------------- Logging (save training logs) --------------------
+    def save_training_logs(self):
+        """Save training logs into data/training/robot_<id>.csv"""
+        try:
+            os.makedirs("data/training", exist_ok=True)
+            filename = f"data/training/robot_{self.robot_id}.csv"
+            df = pd.DataFrame(self.training_logs)
+            df.to_csv(filename, index=False)
+            self.get_logger().info(f"Saved logs to {filename}")
+        except Exception as e:
+            self.get_logger().warn(f"⚠️ save_training_logs failed: {e}")
+
+# -------------------- Entrée principale --------------------
+def parse_robot_id_from_argv(argv):
+    """Essaye d'extraire un robot_id depuis argv ou variable d'env"""
     robot_id = 0
-    if len(sys.argv) > 1:
-        robot_id = int(sys.argv[1])
-    
-    node = AgentNode(robot_id)
-    
+    # méthode argv
+    if len(argv) > 1:
+        arg = argv[1]
+        try:
+            robot_id = int(arg)
+            return robot_id
+        except ValueError:
+            nums = re.findall(r'\d+', arg)
+            if nums:
+                return int(nums[0])
+    # méthode env
+    env_id = os.getenv('ROBOT_ID')
+    if env_id is not None:
+        try:
+            return int(env_id)
+        except ValueError:
+            pass
+    return robot_id
+
+
+def main(argv=None):
+    rclpy.init(args=argv)
+    argv = argv if argv is not None else sys.argv
+    robot_id = parse_robot_id_from_argv(argv)
+    node = None
+
     try:
+        node = REEExplorationAgent(robot_id=robot_id)
         rclpy.spin(node)
     except KeyboardInterrupt:
-        pass
+        if node is not None:
+            node.get_logger().info('🛑 KeyboardInterrupt: saving model and logs, shutting down...')
+            try:
+                # save final model
+                if getattr(node.agent, 'use_shared_model', False):
+                    node.agent.save_model(os.path.join("models", "shared", "final_shared_model.pth"))
+                else:
+                    node.agent.save_model(os.path.join(node.save_dir, "final_model.pth"))
+                # save logs on shutdown
+                node.save_training_logs()
+            except Exception as e:
+                node.get_logger().warn(f'⚠️ saving on shutdown failed: {e}')
+    except Exception as e:
+        if node is not None:
+            node.get_logger().error(f'❌ Fatal error in agent node: {e}')
+        import traceback
+        traceback.print_exc()
     finally:
-        node.destroy_node()
+        if node is not None:
+            node.destroy_node()
         rclpy.shutdown()
+
 
 if __name__ == '__main__':
     main()

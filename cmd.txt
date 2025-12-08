@@ -36,6 +36,7 @@ ros2 run ree_exploration_agent agent_node 3
 ```bash
 source ~/ree_exploration_ros2/install/setup.bash
 ros2 run spectral_classifier spectral_classifier_node
+
 ```
 ### **Terminal 9 - Monitoring**
 ```bash
@@ -43,41 +44,5 @@ source ~/ree_exploration_ros2/install/setup.bash
 ./start_dashboard.sh
 ```
 
-## 📈 **VÉRIFICATION VISUELLE**
-
-Une fois lancé, vous devriez voir :
-
-```
-🚀 LANCEMENT DU SYSTÈME COMPLET REE EXPLORATION
-================================================
-
-🟢 Démarrage: serveur_principal
-🟢 Démarrage: systeme_ia  
-🟢 Démarrage: coordinateur
-🟢 Démarrage: robot_0
-🟢 Démarrage: robot_1
-🟢 Démarrage: robot_2
-🟢 Démarrage: robot_3
-🟢 Démarrage: classificateur
-
-✅ TOUS LES SYSTÈMES SONT DÉMARRÉS !
-
-📊 STATUT DES NOEUDS ACTIFS:
-/agent_node_0
-/agent_node_1  
-/agent_node_2
-/agent_node_3
-/coordinateur
-/science_ai_system
-/server_node
-/spectral_classifier_node
-
-🤖 STATUT DES ROBOTS:
-  ✅ Robot 0: ACTIF
-  ✅ Robot 1: ACTIF
-  ✅ Robot 2: ACTIF
-  ✅ Robot 3: ACTIF
-
-🧠 STATUT IA:
-  ✅ Système IA: ACTIF
-  ✅ Publication IA: FONCTIONNE```## 🎯 **PROCHAINES ÉTAPES**1. **Surveillez les logs** : `tail -f mission_logs/*.log`2. **Testez le système** : `./test_system.sh`3. **Observez l'IA** : `ros2 topic echo /ai/analysis`4. **Vérifiez les robots** : `ros2 topic echo /robot_0/position`Votre système complet d'exploration robotique autonome pour terres rares est maintenant **OPÉRATIONNEL** ! 🎉🚀
+Foxglove - moniteur en ligne.
+ros2 launch foxglove_bridge foxglove_bridge_launch.xml
