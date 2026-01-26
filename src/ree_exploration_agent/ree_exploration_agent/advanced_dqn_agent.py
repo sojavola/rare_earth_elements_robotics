@@ -9,7 +9,6 @@ import glob
 import threading
 
 
-
 class SharedDQNManager:
     """Manager central pour le modèle DQN partagé entre tous les robots"""
     

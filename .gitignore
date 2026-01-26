@@ -6,6 +6,9 @@ install/
 log/
 *.egg-info/
 .vscode/
+data/
+models/
+nootbook/
 *.db
 *.sh.env
 *.bash
