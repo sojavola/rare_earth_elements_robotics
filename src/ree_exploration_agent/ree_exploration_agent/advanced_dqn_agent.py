@@ -7,82 +7,79 @@ from collections import deque
 import os
 import glob
 import threading
+from datetime import datetime
+
+
+try:
+    from .data_logger import EnhancedDataLogger
+    DATA_LOGGER_AVAILABLE = True
+    print("✅ EnhancedDataLogger importé avec succès")
+except ImportError as e:
+    DATA_LOGGER_AVAILABLE = False
+    print(f"⚠️  EnhancedDataLogger non disponible: {e}")
+    print("   Le logging sera désactivé")
 
 
 class SharedDQNManager:
-    """Manager central pour le modèle DQN partagé entre tous les robots"""
-    
+  
     _instance = None
     _lock = threading.Lock()
-     
-    @classmethod
-    def get_instance(cls):
-        if cls._instance is None:
-            with cls._lock:
-                if cls._instance is None:
-                    cls._instance = cls.__new__(cls)
-                    cls._instance._initialized = False
-                    cls._instance._init_attributes()
-        return cls._instance
     
-    def _init_attributes(self):
-        """Initialise les attributs (appelé une seule fois)"""
-        if not hasattr(self, 'training_lock'):
-            self.training_lock = threading.Lock()
-            self.shared_policy_net = None
-            self.shared_target_net = None
-            self.shared_optimizer = None
+    def __new__(cls):
+        with cls._lock:
+            if cls._instance is None:
+                cls._instance = super(SharedDQNManager, cls).__new__(cls)
+                cls._instance._initialized = False
+                
+                # ✅ INITIALISATION DES ATTRIBUTS DANS __new__
+                cls._instance.training_lock = threading.Lock()
+                cls._instance.shared_policy_net = None
+                cls._instance.shared_target_net = None
+                cls._instance.shared_optimizer = None
+                cls._instance.global_step_count = 0
+                cls._instance.global_episode_count = 0
+                cls._instance.robot_ids = set()
+
+            return cls._instance
+    
+    def initialize(self, state_shape, num_actions, device='cpu'):
+        if not self._initialized:
+
+            print(f"🧠 [GLOBAL] Initialisation du modèle partagé...")
+
+            self.device = torch.device(device)
+            self.state_shape = state_shape
+            self.num_actions = num_actions
+            
+            # ✅ UN SEUL MODÈLE POUR TOUS LES ROBOTS
+            self.shared_policy_net = CNN_DQN(state_shape, num_actions).to(self.device)
+            self.shared_target_net = CNN_DQN(state_shape, num_actions).to(self.device)
+            self.shared_target_net.load_state_dict(self.shared_policy_net.state_dict())
+            self.shared_target_net.eval()
+            
+            # Optimiseur partagé
+            self.shared_optimizer = optim.Adam(
+                self.shared_policy_net.parameters(), 
+                lr=0.00025  # ✅ Comme dans le papier
+            )
+
             self.global_step_count = 0
             self.global_episode_count = 0
             self.robot_ids = set()
-            print(f"✅ [GLOBAL] Attributs initialisés")
-    
-    def initialize(self, state_shape, num_actions, device='cpu'):
-        """Initialise le modèle partagé (à appeler une seule fois)"""
+            
+            self.training_lock = threading.Lock()
 
-        with self._lock:  # Verrou pour l'initialisation
-            if not self._initialized:
-                print(f"🧠 [GLOBAL] Initialisation du modèle partagé...")
-
-                self.device = torch.device(device)
-                self.state_shape = state_shape
-                self.num_actions = num_actions
-                
-                # ✅ UN SEUL MODÈLE POUR TOUS LES ROBOTS
-                self.shared_policy_net = CNN_DQN(state_shape, num_actions).to(self.device)
-                self.shared_target_net = CNN_DQN(state_shape, num_actions).to(self.device)
-                self.shared_target_net.load_state_dict(self.shared_policy_net.state_dict())
-                self.shared_target_net.eval()
-                
-                # Optimiseur partagé
-                self.shared_optimizer = optim.Adam(
-                    self.shared_policy_net.parameters(), 
-                    lr=0.00025  # ✅ Comme dans le papier
-                )
-
-                self.global_step_count = 0
-                self.global_episode_count = 0
-                self.robot_ids = set()
-                
-                self.training_lock = threading.Lock()
-
-                self._initialized = True
-                print(f"🧠 [GLOBAL] Modèle DQN PARTAGÉ initialisé") 
-                print(f"🔒 Verrou d'entraînement créé: {id(self.training_lock)}")
-
-            else:
-                print(f"ℹ️  [GLOBAL] Modèle déjà initialisé - {len(self.robot_ids)} robots enregistrés") 
-
+            self._initialized = True
+            print(f"🧠 [GLOBAL] Modèle DQN PARTAGÉ initialisé") 
+            print(f"🔒 Verrou d'entraînement créé") 
 
     def get_shared_networks(self):
-        """Retourne les réseaux partagés"""
         if not self._initialized:
             raise RuntimeError("SharedDQNManager non initialisé!")
         
         return self.shared_policy_net, self.shared_target_net, self.shared_optimizer
 
     def register_robot(self, robot_id):
-        """Enregistre un robot dans le système partagé"""
         # ✅ VÉRIFIER SI INITIALISÉ
         if not self._initialized:
             print(f"⚠️  [GLOBAL] Manager non initialisé, initialisation automatique...")
@@ -93,7 +90,6 @@ class SharedDQNManager:
 
 
     def get_stats(self):
-        """Retourne les statistiques globales"""
         return {
             'global_step_count': self.global_step_count,
             'global_episode_count': self.global_episode_count,
@@ -102,100 +98,102 @@ class SharedDQNManager:
         }
 
         
-    
     def get_shared_networks(self):
-        """Retourne les réseaux partagés"""
         return self.shared_policy_net, self.shared_target_net, self.shared_optimizer
     
     def get_training_lock(self):
-        """Garantit que le verrou existe"""
         if not hasattr(self, 'training_lock') or self.training_lock is None:
             print(f"⚠️  [GLOBAL] Création d'urgence du verrou d'entraînement...")
             self.training_lock = threading.Lock()
             print(f"✅ [GLOBAL] Verrou d'urgence créé: {id(self.training_lock)}")
         return self.training_lock
 
-
-
 class CNN_DQN(nn.Module):
-    """DQN avec architecture CNN comme décrite dans le papier"""
-    
+    """
+    DQN adapté pour grilles spatiales 100×100
+    Préserve la géométrie tout en réduisant progressivement
+    """
     def __init__(self, input_shape, num_actions):
         super(CNN_DQN, self).__init__()
         
-        self.input_shape = input_shape  # (height, width, channels)
+        self.input_shape = input_shape  # (100, 100, 8)
         self.num_actions = num_actions
         
-        # Couches convolutionnelles exactement comme dans le papier
+        # ✅ ARCHITECTURE OPTIMISÉE POUR GRILLES
         self.conv_layers = nn.Sequential(
-            # Première couche: 32 filtres 8x8, stride 4
-            nn.Conv2d(input_shape[2], 32, kernel_size=8, stride=4),
+            # Conv1: Extraction features locales
+            nn.Conv2d(input_shape[2], 32, kernel_size=5, stride=2, padding=2),  # 100→50
             nn.ReLU(),
+            nn.BatchNorm2d(32),  # Stabilité
             
-            # Deuxième couche: 64 filtres 4x4, stride 2
-            nn.Conv2d(32, 64, kernel_size=4, stride=2),
+            # Conv2: Features régionales
+            nn.Conv2d(32, 64, kernel_size=3, stride=2, padding=1),  # 50→25
             nn.ReLU(),
+            nn.BatchNorm2d(64),
             
-            # Troisième couche: 64 filtres 3x3, stride 1
-            nn.Conv2d(64, 64, kernel_size=3, stride=1),
+            # Conv3: Features globales
+            nn.Conv2d(64, 128, kernel_size=3, stride=2, padding=1),  # 25→13
+            nn.ReLU(),
+            nn.BatchNorm2d(128),
+            
+            # Conv4: Compression finale
+            nn.Conv2d(128, 128, kernel_size=3, stride=1, padding=1),  # 13→13
             nn.ReLU()
         )
         
-        # Calculer la taille des features après les conv layers
+        # Calculer taille automatiquement
         conv_output_size = self._get_conv_output_size(input_shape)
         
-        # Couches denses comme dans le papier
+        # Couches denses
         self.dense_layers = nn.Sequential(
-            # Flatten + Dense 512
             nn.Flatten(),
             nn.Linear(conv_output_size, 512),
             nn.ReLU(),
-            
-            # Couche de sortie: 8 neurones avec activation linéaire
+            nn.Dropout(0.2),  # Régularisation
             nn.Linear(512, num_actions)
-            # Pas d'activation pour la sortie (linéaire comme dans le papier)
         )
-        
+    
     def _get_conv_output_size(self, shape):
-        """Calcule automatiquement la taille après les couches convolutionnelles"""
+        """Calcule automatiquement la taille après conv"""
         with torch.no_grad():
-            # Créer un tensor dummy pour calculer la taille
-            dummy_input = torch.zeros(1, shape[2], shape[0], shape[1])
-            output = self.conv_layers(dummy_input)
+            # (C, H, W) pour PyTorch
+            dummy = torch.zeros(1, shape[2], shape[0], shape[1])
+            output = self.conv_layers(dummy)
             return output.view(1, -1).size(1)
     
     def forward(self, state):
+        """
+        Input: (H, W, C) numpy ou (B, H, W, C)
+        Output: (B, num_actions) Q-values
+        """
         try:
-            mineral_map, position = state
+            # Conversion et permutation des dimensions
+            if isinstance(state, np.ndarray):
+                state = torch.FloatTensor(state)
             
-            # Convertir en tensor si nécessaire
-            if isinstance(mineral_map, np.ndarray):
-                mineral_map = torch.FloatTensor(mineral_map)
+            # (H, W, C) → (C, H, W)
+            if state.dim() == 3:
+                state = state.permute(2, 0, 1).unsqueeze(0)
+            # (B, H, W, C) → (B, C, H, W)
+            elif state.dim() == 4:
+                state = state.permute(0, 3, 1, 2)
             
-            # Réorganiser les dimensions: (H, W, C) -> (C, H, W)
-            if mineral_map.dim() == 3:
-                mineral_map = mineral_map.permute(2, 0, 1)  # (C, H, W)
-            elif mineral_map.dim() == 4:
-                mineral_map = mineral_map.permute(0, 3, 1, 2)  # (B, C, H, W)
-            
-            # Ajouter dimension batch si nécessaire
-            if mineral_map.dim() == 3:
-                mineral_map = mineral_map.unsqueeze(0)  # (1, C, H, W)
-            
-            # Passer à travers les couches convolutionnelles
-            conv_output = self.conv_layers(mineral_map)
-            
-            # Passer à travers les couches denses
-            q_values = self.dense_layers(conv_output)
+            # Forward pass
+            features = self.conv_layers(state)
+            q_values = self.dense_layers(features)
             
             return q_values
             
         except Exception as e:
-            print(f"❌ CNN Forward error: {e}")
-            print(f"State shapes: mineral_map={mineral_map.shape if hasattr(mineral_map, 'shape') else 'N/A'}")
-            return torch.zeros(1, self.num_actions)
+            print(f"❌ Forward error: {e}")
+            print(f"   State shape: {state.shape if hasattr(state, 'shape') else 'N/A'}")
+            return torch.zeros(
+                (state.size(0), self.num_actions),
+                device=state.device,
+                requires_grad=True
+            )
 
-# Configuration de l'optimiseur comme dans le papier
+
 def create_optimizer(model, learning_rate=0.00025):
     return torch.optim.Adam(model.parameters(), lr=learning_rate)
 
@@ -228,26 +226,18 @@ class RobustDQNAgent:
                  batch_size=32, 
                  target_update=1000,
                  load_latest_model=True,# Réduit pour debug
-                 use_shared_model=True
+                 use_shared_model=False,
+                 enable_logging=True,
+                 use_real_reward_system=True
                  ):  
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        print(f"🤖 Robot {robot_id} démarré sur device: {self.device}")
 
-        import sys
-        if len(sys.argv) > 1:
-            try:
-                robot_id = int(sys.argv[1])
-                print(f"🎯 FORCÉ: Robot ID = {robot_id} (depuis ligne de commande)")
-            except:
-                pass
-        
+
         self.state_shape = state_shape
         self.num_actions = num_actions
         self.robot_id = robot_id  # ✅ MAINTENANT DÉFINI
+        print(f"🎯 DEBUG: Robot ID reçu = {robot_id}, stocké = {self.robot_id}")
 
-        print(f"🤖 Robot {self.robot_id} démarré sur device: {self.device}")
-        print(f"🎯 Robot ID final: {robot_id}")
-        
+
         self.gamma = gamma
         self.epsilon = epsilon
         self.epsilon_min = epsilon_min
@@ -272,16 +262,14 @@ class RobustDQNAgent:
         # Réseaux
         if use_shared_model:
             # Obtenir les réseaux partagés
-            self.shared_manager = SharedDQNManager.get_instance()
+            self.shared_manager = SharedDQNManager()
             self.shared_manager.initialize(state_shape, num_actions, self.device)
             self.shared_manager.register_robot(self.robot_id)
             self.policy_net, self.target_net, self.optimizer = self.shared_manager.get_shared_networks()
             print(f"🔗 Robot {self.robot_id} utilisant le modèle DQN PARTAGÉ")
-            print(f"📊 ID Policy net: {id(self.policy_net)}")
-            print(f"📊 ID Target net: {id(self.target_net)}")
-
         else:
             # Réseaux individuels (ancienne approche)
+            self.shared_manager = None  # Explicitement None
             self.policy_net = CNN_DQN(state_shape, num_actions).to(self.device)
             self.target_net = CNN_DQN(state_shape, num_actions).to(self.device)
             self.target_net.load_state_dict(self.policy_net.state_dict())
@@ -301,40 +289,207 @@ class RobustDQNAgent:
         
         print(f"🧠 DQN initialized: state_shape={state_shape}, actions={num_actions}")
         print(f"📊 Continuous Learning: ε={self.epsilon:.3f}, step_count={self.step_count}")
-    
-    def find_model(self):
-        """Trouve le modèle approprié (partagé ou individuel)"""
+
+
+#Logger mettrics.
+# 
+#    
+        self.enable_logging = enable_logging and DATA_LOGGER_AVAILABLE
+        
+        if self.enable_logging:
+            try:
+                self.logger = EnhancedDataLogger(robot_id=robot_id)
+                print(f"📊 Logging CSV/Plots activé pour Robot {robot_id}")
+                print(f"   📁 Données sauvegardées dans: logs/robot_{robot_id}/")
+            except Exception as e:
+                print(f"⚠️  Erreur initialisation logger: {e}")
+                self.enable_logging = False
+                self.logger = None
+        else:
+            self.logger = None
+            if enable_logging and not DATA_LOGGER_AVAILABLE:
+                print(f"ℹ️  Robot {robot_id}: DataLogger non disponible, logging désactivé")
+        
+        # Variables pour le tracking d'épisode
+        self._current_episode_data = {
+            'episode': 0,
+            'total_reward': 0,
+            'total_steps': 0,
+            'minerals_collected': 0,
+            'loss_sum': 0,
+            'loss_count': 0,
+            'epsilon': self.epsilon,
+            'memory_size': len(self.memory)
+        }
+        
+        # Charger le modèle si demandé
+#        if load_latest_model:
+#            self.auto_load_latest_model()
+        
+        print(f"🧠 Robot {self.robot_id} initialisé - ε={self.epsilon:.3f}") 
+
+           
+
+    ###
+       
+    def log_step(self, state, action, reward, next_state, position):
+        """Loggue les données d'un step"""
+        if not self.enable_logging or self.logger is None:
+            return
+        
         try:
-            if self.use_shared_model:
-                # ✅ MODÈLE PARTAGÉ
-                model_dir = "models/shared"
-                preferred_file = "latest_shared_model.pth"
+            step_data = {
+                'step': self.step_count,
+                'episode': self.episode_count,
+                'action': action,
+                'reward': reward,
+                'position_x': position[0] if position else 0,
+                'position_y': position[1] if position else 0,
+                'epsilon': self.epsilon,
+                'memory_size': len(self.memory),
+                'timestamp': datetime.now().isoformat()
+            }
+            self.logger.log_step(step_data)
+            
+        except Exception as e:
+            print(f"⚠️  Robot {self.robot_id}: Erreur log_step: {e}")
+    
+    def log_training_step(self, loss):
+        """Loggue les données d'entraînement"""
+        if not self.enable_logging or self.logger is None:
+            return
+        
+        try:
+            training_data = {
+                'training_step': self.step_count,
+                'loss': loss.item() if hasattr(loss, 'item') else loss,
+                'epsilon': self.epsilon,
+                'memory_size': len(self.memory),
+                'timestamp': datetime.now().isoformat()
+            }
+            self.logger.log_training(training_data)
+            
+        except Exception as e:
+            print(f"⚠️  Robot {self.robot_id}: Erreur log_training_step: {e}")
+    
+    def log_mineral_discovery(self, position, mineral_type, concentration, reward):
+        """Loggue une découverte minérale"""
+        if not self.enable_logging or self.logger is None:
+            return
+        
+        try:
+            mineral_data = {
+                'episode': self.episode_count,
+                'step': self.step_count,
+                'position_x': position[0],
+                'position_y': position[1],
+                'mineral_type': mineral_type,
+                'concentration': concentration,
+                'reward_earned': reward,
+                'timestamp': datetime.now().isoformat()
+            }
+            self.logger.log_mineral(mineral_data)
+            
+            # Mettre à jour le compteur d'épisode
+            self._current_episode_data['minerals_collected'] += 1
+            
+        except Exception as e:
+            print(f"⚠️  Robot {self.robot_id}: Erreur log_mineral_discovery: {e}")
+    
+    def start_episode(self):
+        """Démarre un nouvel épisode de logging"""
+        self._current_episode_data = {
+            'episode': self.episode_count,
+            'total_reward': 0,
+            'total_steps': 0,
+            'minerals_collected': 0,
+            'loss_sum': 0,
+            'loss_count': 0,
+            'epsilon': self.epsilon,
+            'memory_size': len(self.memory)
+        }
+    
+    def update_episode_data(self, reward, loss=None):
+        """Met à jour les données de l'épisode en cours"""
+        self._current_episode_data['total_reward'] += reward
+        self._current_episode_data['total_steps'] += 1
+        self._current_episode_data['epsilon'] = self.epsilon
+        self._current_episode_data['memory_size'] = len(self.memory)
+        
+        if loss is not None:
+            self._current_episode_data['loss_sum'] += loss
+            self._current_episode_data['loss_count'] += 1
+    
+    def end_episode(self):
+        """Termine l'épisode et loggue les données"""
+        if not self.enable_logging or self.logger is None:
+            # Juste incrémenter le compteur
+            self.episode_count += 1
+            return
+        
+        try:
+            # Calculer les moyennes
+            avg_loss = (self._current_episode_data['loss_sum'] / 
+                       self._current_episode_data['loss_count'] 
+                       if self._current_episode_data['loss_count'] > 0 else 0)
+            
+            avg_reward = (self._current_episode_data['total_reward'] / 
+                         self._current_episode_data['total_steps'] 
+                         if self._current_episode_data['total_steps'] > 0 else 0)
+            
+            # Calculer le taux d'exploration (simplifié)
+            exploration_rate = 100 * (1.0 - self.epsilon)
+            
+            # Préparer les données d'épisode
+            episode_data = {
+                'episode': self.episode_count,
+                'total_steps': self._current_episode_data['total_steps'],
+                'total_reward': self._current_episode_data['total_reward'],
+                'average_reward': avg_reward,
+                'minerals_collected': self._current_episode_data['minerals_collected'],
+                'exploration_rate': exploration_rate,
+                'epsilon': self._current_episode_data['epsilon'],
+                'memory_size': self._current_episode_data['memory_size'],
+                'loss_avg': avg_loss,
+                'timestamp': datetime.now().isoformat()
+            }
+            
+            # Logguer l'épisode - Vérifier la méthode disponible
+            if hasattr(self.logger, 'log_episode'):
+                self.logger.log_episode(episode_data)
+            elif hasattr(self.logger, 'add_episode_data'):
+                self.logger.add_episode_data(episode_data)
             else:
-                # ✅ MODÈLE INDIVIDUEL (rétrocompatibilité)
-                model_dir = f"models/robot_{self.robot_id}"
-                preferred_file = "latest_model.pth"
+                print(f"⚠️  Robot {self.robot_id}: Logger n'a pas de méthode log_episode")
             
-            if not os.path.exists(model_dir):
-                return None
+            # ⭐ CORRECTION: Vérifier si la méthode existe
+            if self.episode_count % 10 == 0:
+                print(f"📊 Robot {self.robot_id}: Génération rapport épisode {self.episode_count}")
+                
+                if hasattr(self.logger, 'generate_comprehensive_report'):
+                    self.logger.generate_comprehensive_report()
+                elif hasattr(self.logger, 'save_data'):
+                    self.logger.save_data()
+                    print(f"💾 Données sauvegardées pour l'épisode {self.episode_count}")
+                else:
+                    print(f"ℹ️  Aucune méthode de sauvegarde disponible dans le logger")
             
-            # Préférer le fichier latest
-            preferred_path = f"{model_dir}/{preferred_file}"
-            if os.path.exists(preferred_path):
-                return preferred_path
+            # Incrémenter le compteur d'épisodes
+            self.episode_count += 1
             
-            # Sinon chercher n'importe quel .pth
-            model_files = glob.glob(f"{model_dir}/*.pth")
-            if model_files:
-                return max(model_files, key=os.path.getmtime)
-            
-            return None
+            # Réinitialiser pour le prochain épisode
+            self.start_episode()
         
         except Exception as e:
-            print(f"❌ Robot {self.robot_id}: Erreur recherche modèle: {e}")
-            return None
+                print(f"⚠️  Robot {self.robot_id}: Erreur end_episode: {e}")
+                # Incrémenter quand même le compteur
+                self.episode_count += 1
 
+                
+    # ==========================================================
+    """
     def auto_load_latest_model(self):
-        """Charge automatiquement le dernier modèle sauvegardé"""
+        
         try:
             model_path = self.find_model()  # ✅ Utilise la nouvelle méthode
             
@@ -361,7 +516,28 @@ class RobustDQNAgent:
         except Exception as e:
             print(f"❌ Robot {self.robot_id}: Erreur chargement: {e}")
             return False
-
+    """
+    def auto_load_latest_model(self):
+        """Charge automatiquement le dernier modèle sauvegardé"""
+        try:
+            # Appeler load_model() sans paramètre pour qu'il trouve le modèle automatiquement
+            success = self.load_model()
+            
+            if success:
+                # Ajuster epsilon après chargement
+                self.epsilon = max(self.epsilon_min, self.epsilon * 0.7)
+                print(f"✅ Robot {self.robot_id}: Model loaded successfully")
+                print(f"🔄 ε adjusted to: {self.epsilon:.3f}")
+                return True
+            else:
+                print(f"📁 Robot {self.robot_id}: Starting fresh - no model found")
+                return False
+                
+        except Exception as e:
+            print(f"❌ Robot {self.robot_id}: Auto-load error: {e}")
+            return False
+        
+         
     def choose_action(self, state):
         """Choisit une action de manière robuste"""
         if random.random() <= self.epsilon:
@@ -380,28 +556,44 @@ class RobustDQNAgent:
         except Exception as e:
             print(f"❌ Action selection error: {e}")
             return random.randint(0, self.num_actions - 1)
-    
-    def store_experience(self, state, action, reward, next_state, done):
+ ######
+ # ###
+ # ####
+ # ###   
+ 
+    def store_experience(self, state, action, reward, next_state, done,position=None):
         """Stocke une expérience"""
         try:
             self.memory.append((state, action, reward, next_state, done))
         except Exception as e:
             print(f"❌ Store experience error: {e}")
-  
+        
+        if position is not None:
+            self.log_step(state, action, reward, next_state, position)
+        
+        # Mettre à jour les données d'épisode
+        self.update_episode_data(reward)
+
+        if reward > 50.0 and self.enable_logging:
+            self.log_mineral_discovery(
+                position=position,
+                mineral_type=-1,  # À déterminer depuis les données
+                concentration=reward / 100.0,  # Approximation
+                reward=reward
+            )
+            
+####
+# ##
+# ##    
     def train(self):
-        """Entraîne le réseau avec verrouillage global pour modèle partagé"""
+        """Entraîne le réseau (version pour modèles individuels)"""
         
         if len(self.memory) < self.batch_size:
             return 0.0
         
-        # ✅ CORRECTION: Récupérer le verrou correctement
-        if self.use_shared_model and hasattr(self, 'shared_manager'):
-            lock = self.shared_manager.training_lock
-            if lock is None:
-                print(f"⚠️  Robot {self.robot_id}: Verrou non initialisé, création d'urgence")
-                lock = threading.Lock()
-        else:
-            lock = threading.Lock()
+        # ✅ CORRECTION : SIMPLIFIER LE VERRouILLAGE
+        # Puisque chaque robot a sa propre DQN, on utilise juste un verrou local
+        lock = threading.Lock()
         
         with lock:
             try:
@@ -467,6 +659,10 @@ class RobustDQNAgent:
                 # Calculer la loss
                 loss = self.loss_fn(current_q_selected, target_q_values)
                 
+                # Logging
+                self.log_training_step(loss)
+                self.update_episode_data(0, loss)
+                
                 # Backpropagation
                 self.optimizer.zero_grad()
                 loss.backward()
@@ -478,36 +674,26 @@ class RobustDQNAgent:
                 # Mettre à jour epsilon
                 if self.epsilon > self.epsilon_min:
                     self.epsilon *= self.epsilon_decay
+                    self.epsilon = max(self.epsilon, self.epsilon_min)
+
+                # ✅ CORRECTION : TOUJOURS MODE INDIVIDUEL
+                # Chaque robot a sa propre DQN, donc on incrémente son propre compteur
+                self.step_count += 1
                 
-                # ✅ INITIALISER loss_value ICI
+                # Mettre à jour le réseau cible
+                if self.step_count % self.target_update == 0:
+                    self.target_net.load_state_dict(self.policy_net.state_dict())
+                    print(f"🔄 Robot {self.robot_id}: Target network updated at step {self.step_count}")
+                
+                # Enregistrer la loss
                 loss_value = loss.item()
                 self.loss_history.append(loss_value)
                 
-                # ✅ CORRECTION: Mise à jour du compteur global
-                if self.use_shared_model and hasattr(self, 'shared_manager'):
-                    # Incrémenter le compteur global
-                    self.shared_manager.global_step_count += 1
-                    self.step_count = self.shared_manager.global_step_count
-                    
-                    # Afficher avec le bon robot_id
-                    if self.shared_manager.global_step_count % 5 == 0:  # Tous les 5 steps
-                        print(f"📚 [GLOBAL] Step: {self.shared_manager.global_step_count:6d}, "
-                            f"Robot: {self.robot_id}, Loss: {loss_value:6.4f}, "
-                            f"ε: {self.epsilon:.3f}, Memory: {len(self.memory)}")
-                    
-                    # Mettre à jour le réseau cible
-                    if self.shared_manager.global_step_count % self.target_update == 0:
-                        self.target_net.load_state_dict(self.policy_net.state_dict())
-                        print(f"🔄 [GLOBAL] Target network updated at step {self.shared_manager.global_step_count}")
-                else:
-                    # Mode individuel
-                    self.step_count += 1
-                    if self.step_count % self.target_update == 0:
-                        self.target_net.load_state_dict(self.policy_net.state_dict())
-                    
-                    if self.step_count % 10 == 0:
-                        print(f"📚 Robot {self.robot_id}: Step {self.step_count}, "
-                            f"Loss: {loss_value:.4f}, ε: {self.epsilon:.3f}")
+                # ✅ AFFICHAGE INDIVIDUEL SEULEMENT
+                if self.step_count % 10 == 0:
+                    print(f"📚 Robot {self.robot_id}: Step {self.step_count}, "
+                        f"Loss: {loss_value:.4f}, ε: {self.epsilon:.3f}, "
+                        f"Memory: {len(self.memory)}")
                 
                 return loss_value
                 
@@ -515,61 +701,21 @@ class RobustDQNAgent:
                 print(f"❌ Robot {self.robot_id}: Training error: {e}")
                 import traceback
                 traceback.print_exc()
-                return 0.0  # ✅ Retourner 0.0 en cas d'erreur   
-    
+                return 0.0
+    ####
 
-
-
-    def verify_model_sharing(self):
-        """Vérifie que le modèle est bien partagé"""
-        if not self.use_shared_model:
-            print(f"🔧 Robot {self.robot_id}: Modèle individuel - pas de vérification nécessaire")
-            return
-        
-        if not hasattr(self, 'shared_manager'):
-            print(f"❌ Robot {self.robot_id}: Pas de shared_manager!")
-            return
-        
-        print(f"🔍 Robot {self.robot_id} - Vérification partage:")
-        print(f"   ID Policy net: {id(self.policy_net)}")
-        print(f"   ID Target net: {id(self.target_net)}")
-        print(f"   ID Optimizer: {id(self.optimizer)}")
-        print(f"   Robots enregistrés: {self.shared_manager.robot_ids}")
-        
-        # Vérifier si c'est le même objet
-        if hasattr(self.shared_manager, '_reference_net_id'):
-            if id(self.policy_net) == self.shared_manager._reference_net_id:
-                print(f"✅ MODÈLE PARTAGÉ CONFIRMÉ!")
-            else:
-                print(f"❌ ERREUR: Modèles différents!")
-        else:
-            self.shared_manager._reference_net_id = id(self.policy_net)
-            print(f"✅ Référence établie par Robot {self.robot_id}")
-
-
+    ####
+    """
     def save_model(self, filepath=None):
-        """Sauvegarde le modèle avec gestion automatique des noms"""
+ 
         try:
             if filepath is None:
-                # ✅ DÉFINIR model_dir AVANT de l'utiliser
-                if self.use_shared_model:
-                    model_dir = "models/shared"
-                else:
-                    model_dir = f"models/robot_{self.robot_id}"
-                
+                # Générer un nom de fichier automatique
+                model_dir = f"models/"
                 os.makedirs(model_dir, exist_ok=True)
                 
-                if self.use_shared_model:
-                    filepath = f"{model_dir}/shared_model_episode_{self.episode_count}.pth"
-                else:
-                    filepath = f"{model_dir}/model_episode_{self.episode_count}.pth"
+                filepath = f"{model_dir}/shared_model_episode_{self.episode_count}.pth"
             
-            # ✅ S'assurer que le dossier existe
-            model_dir = os.path.dirname(filepath)
-            if model_dir:
-                os.makedirs(model_dir, exist_ok=True)
-            
-            # Sauvegarder le modèle
             torch.save({
                 'policy_net_state_dict': self.policy_net.state_dict(),
                 'target_net_state_dict': self.target_net.state_dict(),
@@ -578,16 +724,12 @@ class RobustDQNAgent:
                 'step_count': self.step_count,
                 'episode_count': self.episode_count,
                 'loss_history': self.loss_history,
-                'is_shared_model': self.use_shared_model,
-                'robot_id': self.robot_id
+                'is_shared_model':True,
+                'robots_id': self.robot_id
             }, filepath)
             
-            # Sauvegarder aussi comme latest
-            if self.use_shared_model:
-                latest_path = f"models/shared/latest_shared_model.pth"
-            else:
-                latest_path = f"models/robot_{self.robot_id}/latest_model.pth"
-            
+            # Sauvegarder aussi comme latest_model
+            latest_path = f"{model_dir}/latest_shared_model.pth"
             torch.save({
                 'policy_net_state_dict': self.policy_net.state_dict(),
                 'target_net_state_dict': self.target_net.state_dict(),
@@ -596,22 +738,21 @@ class RobustDQNAgent:
                 'step_count': self.step_count,
                 'episode_count': self.episode_count,
                 'loss_history': self.loss_history,
-                'is_shared_model': self.use_shared_model,
-                'robot_id': self.robot_id
+                'robot_id': self.robot_id  
             }, latest_path)
             
-            model_type = "PARTAGÉ" if self.use_shared_model else "individuel"
-            print(f"💾 Robot {self.robot_id}: Modèle {model_type} sauvegardé → {os.path.basename(filepath)}")
-            print(f"🔁 Latest model: {os.path.basename(latest_path)}")
+            print(f"💾 Model saved: {filepath}")
+            print(f"🔁 Latest model updated: {latest_path}")
+            print(f"💾 Robot {self.robot_id}: Modèle PARTAGÉ sauvegardé")
+            
             
         except Exception as e:
             print(f"❌ Robot {self.robot_id}: Error saving model: {e}")
-            import traceback
-            traceback.print_exc()
-    
+   
     def load_model(self, filepath):
-        """Charge le modèle"""
+      
         try:
+            model_dir = f"models/robot_{self.robot_id}"
             checkpoint = torch.load(filepath, map_location=self.device)
             self.policy_net.load_state_dict(checkpoint['policy_net_state_dict'])
             self.target_net.load_state_dict(checkpoint['target_net_state_dict'])
@@ -623,7 +764,136 @@ class RobustDQNAgent:
             print(f"📂 Model loaded: {filepath}")
         except Exception as e:
             print(f"❌ Error loading model: {e}")
-    
+    """
+
+    def save_model(self, filepath=None):
+        """Sauvegarde le modèle individuel pour chaque robot"""
+        try:
+            # Dossier pour ce robot
+            model_dir = f"models/robot_{self.robot_id}"
+            os.makedirs(model_dir, exist_ok=True)
+            
+            if filepath is None:
+                # Générer un nom de fichier automatique
+                filepath = f"{model_dir}/model_episode_{self.episode_count}.pth"
+            elif not "/" in filepath and not "\\" in filepath:
+                # Si c'est juste un nom de fichier, le mettre dans le dossier du robot
+                filepath = f"{model_dir}/{filepath}"
+            
+            # Sauvegarder le modèle principal
+            torch.save({
+                'policy_net_state_dict': self.policy_net.state_dict(),
+                'target_net_state_dict': self.target_net.state_dict(),
+                'optimizer_state_dict': self.optimizer.state_dict(),
+                'epsilon': self.epsilon,
+                'step_count': self.step_count,
+                'episode_count': self.episode_count,
+                'loss_history': self.loss_history,
+                'is_shared_model': False,  # ← False pour modèle individuel
+                'robot_id': self.robot_id,   # ← robot_id au singulier
+                'training_steps': self.step_count,  # ✅ Doublon pour sécurité
+                'total_steps': self.step_count,  # ✅ Encore un autre nom
+                'timestamp': datetime.now().isoformat()
+            }, filepath)
+            
+            # Sauvegarder aussi comme latest_model
+            latest_path = f"{model_dir}/latest_model.pth"
+            torch.save({
+                'policy_net_state_dict': self.policy_net.state_dict(),
+                'target_net_state_dict': self.target_net.state_dict(),
+                'optimizer_state_dict': self.optimizer.state_dict(),
+                'epsilon': self.epsilon,
+                'step_count': self.step_count,
+                'episode_count': self.episode_count,
+                'loss_history': self.loss_history,
+                'robot_id': self.robot_id,
+                'training_steps': self.step_count,
+                'timestamp': datetime.now().isoformat()
+            }, latest_path)
+            
+            print(f"💾 Robot {self.robot_id}: Model saved")
+            print(f"   Episode: {self.episode_count}, Steps: {self.step_count}, ε={self.epsilon:.3f}")
+            print(f"   Path: {filepath}")
+            
+            return True
+            
+        except Exception as e:
+            print(f"❌ Robot {self.robot_id}: Error saving model: {e}")
+            import traceback
+            traceback.print_exc()
+            return False
+        
+
+        
+    def load_model(self, filepath=None):
+        """Charge le modèle - paramètre optionnel"""
+        try:
+            if filepath is None:
+                # Trouver automatiquement le modèle
+                if self.use_shared_model:
+                    model_dir = "models/shared"
+                else:
+                    model_dir = f"models/robot_{self.robot_id}"
+                
+                # Chercher latest_model.pth d'abord
+                latest_path = f"{model_dir}/latest_model.pth"
+                if os.path.exists(latest_path):
+                    filepath = latest_path
+                    print(f"🔍 Robot {self.robot_id}: Found latest model")
+
+                else:
+                    # Chercher n'importe quel modèle
+                    import glob
+                    models = glob.glob(f"{model_dir}/*.pth")
+                    if models:
+                        models.sort(key=os.path.getmtime, reverse=True)
+                        filepath = models[0]
+                        print(f"🔍 Robot {self.robot_id}: Found model: {os.path.basename(filepath)}")
+              
+                    else:
+                        print(f"⚠️ Robot {self.robot_id}: No model file found")
+                        return False
+            
+            if not os.path.exists(filepath):
+                print(f"⚠️ Robot {self.robot_id}: Model file not found: {filepath}")
+                return False
+            
+            # Charger le checkpoint
+            checkpoint = torch.load(filepath, map_location=self.device)
+            
+            # Charger les états des réseaux
+            self.policy_net.load_state_dict(checkpoint['policy_net_state_dict'])
+            self.target_net.load_state_dict(checkpoint['target_net_state_dict'])
+            
+            # Charger l'optimizer si disponible
+            if 'optimizer_state_dict' in checkpoint:
+                self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+            saved_step_count = 0
+            
+            # Restaurer les hyperparamètres
+            if 'epsilon' in checkpoint:
+                self.epsilon = float(checkpoint['epsilon'])
+            
+            if 'step_count' in checkpoint:
+                self.step_count = int(checkpoint['step_count'])
+            
+            if 'episode_count' in checkpoint:
+                self.episode_count = int(checkpoint['episode_count'])
+            
+            if 'loss_history' in checkpoint:
+                self.loss_history = checkpoint['loss_history']
+            
+            print(f"✅ Robot {self.robot_id}: Model loaded from {filepath}")
+            print(f"   Episode: {self.episode_count}, Steps: {self.step_count}, ε={self.epsilon:.3f}")
+            
+            return True
+        
+        except Exception as e:
+            print(f"❌ Robot {self.robot_id}: Error loading model: {e}")
+            import traceback
+            traceback.print_exc()
+            return False
+        
     def update_episode_count(self):
         """Met à jour le compteur d'épisodes et sauvegarde périodiquement"""
         self.episode_count += 1
@@ -656,5 +926,3 @@ if __name__ == "__main__":
     )
     
     print("✅ Agent avec Continuous Learning créé avec succès!")
-
-    

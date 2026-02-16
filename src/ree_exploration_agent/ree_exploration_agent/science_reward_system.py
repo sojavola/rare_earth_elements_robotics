@@ -2,187 +2,211 @@ import numpy as np
 import math
 from collections import defaultdict
 import time
+from scipy.ndimage import gaussian_filter
+
 
 class RealMineralRewardSystem:
     """
-    Système de récompenses RÉEL basé sur la détection ACTUELLE de minéraux
-    Élimine les récompenses simulées et les heatmaps artificielles
+    Système de récompenses RÉEL basé sur la logique académique
+    avec heatmap, diffusion gaussienne et équation de Bellman
     """
     
     def __init__(self, grid_size=(100, 100), robot_id=0):
         self.grid_size = grid_size
         self.robot_id = robot_id
         
-        # === CONFIGURATION OPTIMISÉE POUR APPRENTISSAGE RAPIDE ===
+        # === CONFIGURATION ACADÉMIQUE OPTIMISÉE ===
         self.reward_config = {
-            # === RÉCOMPENSES MASSIVES pour PREMIERS MINÉRAUX (CRITIQUE) ===
-            'first_mineral_bonus': 500.0,      # ÉNORME - briser le "0 minéraux"
-            'second_mineral_bonus': 200.0,     # Encouragement continu
-            'third_mineral_bonus': 100.0,      # Pour établir un pattern
+            # === PARAMÈTRES ACADÉMIQUES (comme dans l'article) ===
+            'academic_penalty': -2.0,           # Pénalité standard académique
+            'clean_threshold': 0.1,             # Seuil de propreté
+            'gaussian_sigma': 0.9,              # σ pour diffusion gaussienne
+            'gaussian_update_freq': 15,         # ψ = 15 pas de temps
+            'discount_factor': 0.99,            # γ pour Bellman
             
-            # === RÉCOMPENSES MINÉRALES RÉELLES ===
-            'mineral_base_reward': 80.0,       # Récompense de base par minéral
-            'concentration_multiplier': 50.0,   # Bonus pour concentration
+            # === RÉCOMPENSES MINÉRALES (adaptées) ===
+            'mineral_base_reward': 100.0,       # Base par minéral détecté
+            'concentration_multiplier': 50.0,   # Multiplicateur académique
+            'high_concentration_bonus': 50.0,   # Bonus pour > 0.7
             
-            # === INCITATIONS STRATÉGIQUES ===
-            'high_concentration_bonus': 120.0,  # Pour minéraux > 0.7
-            'mineral_streak_bonus': 20.0,       # Par minéral consécutif
-            'explore_near_mineral': 5.0,        # Explorer près des minéraux connus
+            # === EXPLORATION ACADÉMIQUE ===
+            'exploration_bonus': 1.0,           # Très faible comme dans l'article
+            'new_zone_bonus': 2.0,              # Pour nouvelles zones
             
-            # === RÉCOMPENSES D'EXPLORATION (FAIBLES) ===
-            'exploration_bonus': 2.0,           # TRÈS faible vs minéraux
-            'new_zone_bonus': 10.0,             # Pour nouvelles grandes zones
+            # === PÉNALITÉS ACADÉMIQUES ===
+            'step_penalty': -0.05,              # Pénalité par pas (légère)
+            'collision_penalty': -5.0,          # Pour collisions
+            'revisiting_penalty': -0.5,         # Pour zones revisitées
             
-            # === PÉNALITÉS POUR GUIDER L'APPRENTISSAGE ===
-            'step_penalty': -0.1,               # Encourager l'efficacité
-            'stagnation_penalty': -15.0,        # Après 30 steps sans minéral
-            'revisiting_penalty': -1.0,         # Décourager les retours
-            'collision_penalty': -10.0,         # Significatif mais pas bloquant
-            
-            # === BONUS DE PROGRESSION ===
-            'coverage_bonus': 0.05,             # Par % de carte exploré
-            'efficiency_bonus': 0.5,            # Pour trajectoires optimales
+            # === BONUS STRATÉGIQUES ===
+            'coverage_bonus': 0.02,             # Par % de carte exploré
+            'efficiency_bonus': 0.3,            # Pour minéraux/steps
         }
         
-        # === SUIVI CRITIQUE DES MINÉRAUX ===
+        # === HEATMAP ACADÉMIQUE (simulée) ===
+        self.academic_heatmap = self._initialize_academic_heatmap()
+        
+        # === SUIVI DES MINÉRAUX RÉELS ===
         self.minerals_collected = 0
         self.steps_without_mineral = 0
         self.last_mineral_position = None
-        self.mineral_positions = []  # Liste des positions de minéraux trouvés
+        self.mineral_positions = []
         self.concentration_history = []
         
         # === SUIVI EXPLORATION ===
         self.visited_positions = set()
+        self.cleaned_positions = set()  # Positions "nettoyées" académiquement
         self.unique_positions_count = 0
-        self.last_unique_position_time = time.time()
+        
+        # === COMPTEURS GAUSSIENS ===
+        self.gaussian_step = 0
+        self.total_steps = 0
         
         # === STATISTIQUES ===
         self.total_reward = 0.0
+        self.academic_reward_total = 0.0
+        self.real_reward_total = 0.0
         self.episode_rewards = []
-        self.mineral_detection_log = []
         
-        # === SEUILS RÉALISTES ===
-        self.mineral_detection_threshold = 0.1  # Seuil de détection
-        self.high_concentration_threshold = 0.7
+        print(f"🤖 Robot {robot_id}: Système de récompenses ACADÉMIQUE initialisé")
+        print(f"   - Heatmap: {grid_size[0]}x{grid_size[1]}")
+        print(f"   - Diffusion gaussienne: σ={self.reward_config['gaussian_sigma']}, ψ={self.reward_config['gaussian_update_freq']}")
+        print(f"   - Équation Bellman: γ={self.reward_config['discount_factor']}")
+    
+    def _initialize_academic_heatmap(self):
+        """Initialise la heatmap académique avec bruit réaliste"""
+        height, width = self.grid_size
+        heatmap = np.random.rand(height, width)
         
-        print(f"🤖 Robot {robot_id}: Système de récompenses RÉEL initialisé")
-        print(f"   - Premier minéral: +{self.reward_config['first_mineral_bonus']} pts")
-        print(f"   - Exploration: +{self.reward_config['exploration_bonus']} pts")
-        print(f"   - Seuil détection: {self.mineral_detection_threshold}")
+        # Appliquer un filtre gaussien pour créer des clusters
+        heatmap = gaussian_filter(heatmap, sigma=3.0)
+        
+        # Normaliser entre 0 et 1
+        heatmap = (heatmap - np.min(heatmap)) / (np.max(heatmap) - np.min(heatmap))
+        
+        # Ajouter quelques zones très prioritaires
+        for _ in range(10):
+            x = np.random.randint(10, width - 10)
+            y = np.random.randint(10, height - 10)
+            radius = np.random.randint(5, 15)
+            
+            for i in range(max(0, y - radius), min(height, y + radius)):
+                for j in range(max(0, x - radius), min(width, x + radius)):
+                    distance = np.sqrt((i - y)**2 + (j - x)**2)
+                    if distance < radius:
+                        concentration = 0.8 * (1.0 - distance / radius)
+                        heatmap[i, j] = max(heatmap[i, j], concentration)
+        
+        return np.clip(heatmap, 0, 1)
     
     def calculate_reward(self, mineral_concentrations, position, 
                         is_new_position=False, has_collision=False,
                         step_count=0, sensor_data=None):
         """
-        Calcule la récompense BASÉE SUR LES DONNÉES RÉELLES
-        
-        Args:
-            mineral_concentrations: Liste des concentrations réelles [0.0-1.0]
-            position: (x, y) position actuelle
-            is_new_position: Bool si nouvelle position
-            has_collision: Bool si collision
-            step_count: Nombre de steps dans l'épisode
-            sensor_data: Données supplémentaires des capteurs
-        
-        Returns:
-            float: Récompense calculée
+        Calcule la récompense ACADÉMIQUE hybride
+        Combine: heatmap simulée + données minérales réelles
         """
-        reward = 0.0
         x, y = position
         position_key = (int(x), int(y))
+        self.total_steps += 1
         
-        # === 1. DÉTECTION ET RÉCOMPENSE MINÉRALE (PRIORITAIRE) ===
-        mineral_reward = self._calculate_mineral_reward(
-            mineral_concentrations, position_key, step_count
-        )
-        reward += mineral_reward
+        # === 1. RÉCOMPENSE ACADÉMIQUE (heatmap) ===
+        academic_reward = self._calculate_academic_reward(position_key, has_collision)
         
-        # === 2. EXPLORATION (TRÈS FAIBLE) ===
-        exploration_reward = self._calculate_exploration_reward(
-            position_key, is_new_position
-        )
-        reward += exploration_reward
+        # === 2. RÉCOMPENSE RÉELLE (minéraux) ===
+        real_reward = self._calculate_real_mineral_reward(mineral_concentrations, position_key)
         
-        # === 3. PÉNALITÉS (MODÉRÉES) ===
-        penalties = self._calculate_penalties(
-            has_collision, step_count
-        )
-        reward += penalties
+        # === 3. COMBINAISON HYBRIDE (70% réel, 30% académique) ===
+        hybrid_reward = 0.7 * real_reward + 0.3 * academic_reward
         
         # === 4. BONUS STRATÉGIQUES ===
-        strategic_bonus = self._calculate_strategic_bonus(
-            position_key, step_count
-        )
-        reward += strategic_bonus
+        strategic_bonus = self._calculate_strategic_bonus(position_key, step_count)
+        hybrid_reward += strategic_bonus
         
-        # === MISE À JOUR DU SUIVI ===
-        self._update_tracking(position_key, is_new_position)
-        self.total_reward += reward
+        # === 5. DIFFUSION GAUSSIENNE (simulation académique) ===
+        self._update_gaussian_diffusion()
         
-        # === VALIDATION ET LOGGING ===
-        if mineral_reward > 10.0:  # Si récompense minérale significative
-            self._log_mineral_event(position_key, mineral_reward, mineral_concentrations)
+        # === 6. MISE À JOUR ===
+        self._update_tracking(position_key, is_new_position, real_reward > 0)
+        self.total_reward += hybrid_reward
+        self.academic_reward_total += academic_reward
+        self.real_reward_total += real_reward
         
-        # S'assurer que la récompense est valide
-        if np.isnan(reward) or np.isinf(reward):
-            print(f"⚠️  Reward invalide détectée: {reward}, correction à 0.0")
+        # Validation
+        if np.isnan(hybrid_reward) or np.isinf(hybrid_reward):
+            print(f"⚠️  Reward invalide: {hybrid_reward}, correction à 0.0")
             return 0.0
         
-        return reward
+        return hybrid_reward
     
-    def _calculate_mineral_reward(self, concentrations, position_key, step_count):
-        """Calcule la récompense pour vrais minéraux détectés"""
+    def _calculate_academic_reward(self, position_key, has_collision):
+        """
+        Calcule la récompense académique: cpi = Σ(s(j,l) × xi(j,l))
+        Selon la logique: ri = { cpi si cpi > 0, penalty sinon }
+        """
+        x, y = position_key
+        
+        # Vérifier les limites
+        if not (0 <= y < self.grid_size[0] and 0 <= x < self.grid_size[1]):
+            return self.reward_config['academic_penalty']
+        
+        # Pénalité de collision
+        if has_collision:
+            return self.reward_config['collision_penalty']
+        
+        # Vérifier si position déjà nettoyée
+        if position_key in self.cleaned_positions:
+            return self.reward_config['revisiting_penalty']
+        
+        # Obtenir la valeur de la heatmap: s(j,l)
+        heatmap_value = self.academic_heatmap[y, x]
+        
+        # Seuil de propreté académique
+        if heatmap_value < self.reward_config['clean_threshold']:
+            # Zone déjà "propre" → pénalité académique
+            return self.reward_config['academic_penalty']
+        
+        # RÉCOMPENSE ACADÉMIQUE: cpi = s(j,l) × xi(j,l)
+        # où xi(j,l) = 1 car le robot "nettoie" cette cellule
+        academic_reward = heatmap_value * self.reward_config['mineral_base_reward']
+        
+        # "Nettoyer" la cellule dans la heatmap (simuler l'effet de nettoyage)
+        reduction_factor = 0.1  # Réduire de 90%
+        self.academic_heatmap[y, x] *= reduction_factor
+        
+        # Marquer comme nettoyée
+        self.cleaned_positions.add(position_key)
+        
+        return academic_reward
+    
+    def _calculate_real_mineral_reward(self, concentrations, position_key):
+        """Calcule la récompense pour minéraux réels"""
         if not concentrations:
             return 0.0
         
-        # Prendre la concentration max parmi tous les types
+        # Concentration maximale détectée
         max_concentration = max(concentrations) if concentrations else 0.0
+        detection_threshold = 0.1
         
-        # Vérifier si au-dessus du seuil de détection
-        if max_concentration < self.mineral_detection_threshold:
+        if max_concentration < detection_threshold:
             self.steps_without_mineral += 1
             return 0.0
         
-        # === MINÉRAL DÉTECTÉ ! ===
+        # MINÉRAL DÉTECTÉ !
         mineral_reward = 0.0
         self.steps_without_mineral = 0
         
-        # 1. BONUS MASSIF POUR PREMIERS MINÉRAUX
-        if self.minerals_collected == 0:
-            bonus = self.reward_config['first_mineral_bonus']
-            mineral_reward += bonus
-            print(f"\n🎉🎉🎉 [Robot {self.robot_id}] PREMIER MINÉRAL TROUVÉ!")
-            print(f"   Position: {position_key}")
-            print(f"   Concentration: {max_concentration:.3f}")
-            print(f"   BONUS: +{bonus:.1f} points!")
-            
-        elif self.minerals_collected == 1:
-            bonus = self.reward_config['second_mineral_bonus']
-            mineral_reward += bonus
-            print(f"\n🎉 [Robot {self.robot_id}] DEUXIÈME MINÉRAL!")
-            print(f"   BONUS: +{bonus:.1f} points")
-            
-        elif self.minerals_collected == 2:
-            bonus = self.reward_config['third_mineral_bonus']
-            mineral_reward += bonus
-            print(f"\n🎉 [Robot {self.robot_id}] TROISIÈME MINÉRAL!")
-            print(f"   BONUS: +{bonus:.1f} points")
-        
-        # 2. RÉCOMPENSE DE BASE
+        # Récompense de base proportionnelle à la concentration
         base_reward = max_concentration * self.reward_config['mineral_base_reward']
         mineral_reward += base_reward
         
-        # 3. BONUS CONCENTRATION
+        # Bonus concentration (académique)
         concentration_bonus = max_concentration * self.reward_config['concentration_multiplier']
         mineral_reward += concentration_bonus
         
-        # 4. BONUS HAUTE CONCENTRATION
-        if max_concentration > self.high_concentration_threshold:
+        # Bonus haute concentration
+        if max_concentration > 0.7:
             mineral_reward += self.reward_config['high_concentration_bonus']
-        
-        # 5. BONUS STREAK (minéraux consécutifs)
-        streak_bonus = min(self.minerals_collected, 10) * self.reward_config['mineral_streak_bonus']
-        mineral_reward += streak_bonus
         
         # Mettre à jour les statistiques
         self.minerals_collected += 1
@@ -190,337 +214,229 @@ class RealMineralRewardSystem:
         self.concentration_history.append(max_concentration)
         self.last_mineral_position = position_key
         
+        # Log des découvertes importantes
+        if max_concentration > 0.5:
+            print(f"🎯 Robot {self.robot_id}: Minéral détecté à {position_key}")
+            print(f"   Concentration: {max_concentration:.3f}, Reward: {mineral_reward:.1f}")
+        
         return mineral_reward
-    
-    def _calculate_exploration_reward(self, position_key, is_new_position):
-        """Récompense TRÈS FAIBLE pour exploration"""
-        exploration_reward = 0.0
-        
-        if is_new_position and position_key not in self.visited_positions:
-            # Récompense de base TRÈS faible
-            exploration_reward += self.reward_config['exploration_bonus']
-            
-            # Petit bonus si exploration rapide
-            time_since_last = time.time() - self.last_unique_position_time
-            if time_since_last < 2.0:  # Exploration rapide
-                exploration_reward += 1.0
-            
-            self.last_unique_position_time = time.time()
-        
-        elif position_key in self.visited_positions:
-            # Pénalité pour revisite
-            exploration_reward += self.reward_config['revisiting_penalty']
-        
-        return exploration_reward
-    
-    def _calculate_penalties(self, has_collision, step_count):
-        """Calcule les pénalités"""
-        penalty = 0.0
-        
-        # 1. Pénalité par step (pour vitesse)
-        penalty += self.reward_config['step_penalty']
-        
-        # 2. Pénalité de stagnation
-        if self.steps_without_mineral > 30:
-            stagnation = self.steps_without_mineral // 30
-            penalty += stagnation * self.reward_config['stagnation_penalty']
-            
-            # Avertissement après 60 steps sans minéral
-            if self.steps_without_mineral > 60 and self.steps_without_mineral % 10 == 0:
-                print(f"⚠️  [Robot {self.robot_id}] {self.steps_without_mineral} steps sans minéral")
-        
-        # 3. Pénalité de collision
-        if has_collision:
-            penalty += self.reward_config['collision_penalty']
-        
-        return penalty
     
     def _calculate_strategic_bonus(self, position_key, step_count):
         """Bonus stratégiques pour comportements intelligents"""
         bonus = 0.0
         
-        # 1. Bonus pour exploration près des minéraux connus
-        if self.last_mineral_position:
-            distance = self._calculate_distance(position_key, self.last_mineral_position)
-            if distance < 25:  # Dans un rayon de 25 unités
-                explore_bonus = (25 - distance) * 0.2
-                bonus += explore_bonus
+        # Bonus exploration de nouvelles zones
+        if position_key not in self.visited_positions:
+            bonus += self.reward_config['exploration_bonus']
+            
+            # Bonus supplémentaire pour exploration rapide
+            if step_count < 50:  # Début d'épisode
+                bonus += self.reward_config['new_zone_bonus']
         
-        # 2. Bonus de couverture
+        # Bonus de couverture (académique)
         coverage = len(self.visited_positions) / (self.grid_size[0] * self.grid_size[1])
-        bonus += coverage * self.reward_config['coverage_bonus'] * 100
+        bonus += coverage * self.reward_config['coverage_bonus'] * 1000
         
-        # 3. Bonus d'efficacité si beaucoup de minéraux par step
+        # Bonus d'efficacité (minéraux par step)
         if step_count > 10 and self.minerals_collected > 0:
             efficiency = self.minerals_collected / max(step_count, 1)
             bonus += efficiency * self.reward_config['efficiency_bonus'] * 100
         
+        # Pénalité par step (encourage l'efficacité)
+        bonus += self.reward_config['step_penalty']
+        
         return bonus
     
-    def _update_tracking(self, position_key, is_new_position):
-        """Met à jour le suivi des positions"""
+    def _update_gaussian_diffusion(self):
+        """Applique la diffusion gaussienne académique"""
+        self.gaussian_step += 1
+        
+        if self.gaussian_step % self.reward_config['gaussian_update_freq'] == 0:
+            # Appliquer le filtre gaussien: N(μ, σ²) avec μ=0, σ=0.9
+            sigma = self.reward_config['gaussian_sigma']
+            self.academic_heatmap = gaussian_filter(self.academic_heatmap, sigma=sigma)
+            
+            # Régénérer légèrement les zones nettoyées
+            regeneration_rate = 0.05
+            mask = np.random.rand(*self.academic_heatmap.shape) < regeneration_rate
+            self.academic_heatmap[mask] = np.minimum(1.0, self.academic_heatmap[mask] + 0.1)
+            
+            # Effacer certaines positions nettoyées (regénération)
+            positions_to_remove = []
+            for pos in self.cleaned_positions:
+                x, y = pos
+                if 0 <= y < self.grid_size[0] and 0 <= x < self.grid_size[1]:
+                    if np.random.random() < 0.1:  # 10% de chance de regénération
+                        positions_to_remove.append(pos)
+                        self.academic_heatmap[y, x] = np.random.random() * 0.5
+            
+            for pos in positions_to_remove:
+                self.cleaned_positions.remove(pos)
+            
+            print(f"🔄 Robot {self.robot_id}: Diffusion gaussienne appliquée")
+    
+    def _update_tracking(self, position_key, is_new_position, found_mineral):
+        """Met à jour le suivi"""
         if is_new_position and position_key not in self.visited_positions:
             self.visited_positions.add(position_key)
             self.unique_positions_count += 1
     
-    def _log_mineral_event(self, position, reward, concentrations):
-        """Log détaillé des événements minéraux"""
-        log_entry = {
-            'robot_id': self.robot_id,
-            'position': position,
-            'reward': reward,
-            'concentrations': concentrations,
-            'total_minerals': self.minerals_collected,
-            'timestamp': time.time()
-        }
-        self.mineral_detection_log.append(log_entry)
-    
-    def _calculate_distance(self, pos1, pos2):
-        """Calcule la distance Euclidienne"""
-        return math.sqrt((pos1[0] - pos2[0])**2 + (pos1[1] - pos2[1])**2)
-    
     def get_statistics(self):
-        """Retourne les statistiques complètes"""
+        """Retourne les statistiques complètes académiques"""
         if self.minerals_collected > 0:
             avg_concentration = np.mean(self.concentration_history)
         else:
             avg_concentration = 0.0
         
+        # Couverture exploration
         coverage = (len(self.visited_positions) / 
                    (self.grid_size[0] * self.grid_size[1]) * 100)
+        
+        # Métrique académique: c_perc = ((xtot - scurr) / xtot) × 100
+        total_cells = self.grid_size[0] * self.grid_size[1]
+        current_priority_sum = np.sum(self.academic_heatmap)
+        cleanliness_percentage = 100 * (1.0 - current_priority_sum / total_cells)
         
         return {
             'robot_id': self.robot_id,
             'minerals_collected': self.minerals_collected,
             'total_reward': self.total_reward,
+            'academic_reward': self.academic_reward_total,
+            'real_reward': self.real_reward_total,
             'visited_positions': len(self.visited_positions),
             'coverage_percentage': coverage,
+            'cleanliness_percentage': cleanliness_percentage,
             'avg_mineral_concentration': avg_concentration,
             'steps_without_mineral': self.steps_without_mineral,
-            'efficiency_ratio': self.minerals_collected / max(len(self.visited_positions), 1)
+            'gaussian_updates': self.gaussian_step // self.reward_config['gaussian_update_freq'],
+            'heatmap_mean': np.mean(self.academic_heatmap),
+            'heatmap_std': np.std(self.academic_heatmap),
+            'bellman_discount': self.reward_config['discount_factor']
         }
     
     def print_detailed_report(self):
-        """Affiche un rapport détaillé"""
+        """Affiche un rapport détaillé académique"""
         stats = self.get_statistics()
         
         print(f"\n{'='*60}")
-        print(f"🤖 RAPPORT DÉTAILLÉ - Robot {self.robot_id}")
+        print(f"📊 RAPPORT ACADÉMIQUE - Robot {self.robot_id}")
         print(f"{'='*60}")
-        print(f"📊 Minéraux collectés: {stats['minerals_collected']}")
-        print(f"💰 Récompense totale: {stats['total_reward']:.1f}")
-        print(f"🗺️  Positions visitées: {stats['visited_positions']}")
-        print(f"📈 Couverture: {stats['coverage_percentage']:.1f}%")
-        print(f"⚡ Efficacité: {stats['efficiency_ratio']:.3f} minéraux/position")
+        
+        print(f"🎯 PERFORMANCE:")
+        print(f"   Minéraux collectés: {stats['minerals_collected']}")
+        print(f"   Récompense totale: {stats['total_reward']:.1f}")
+        print(f"     → Académique: {stats['academic_reward']:.1f}")
+        print(f"     → Réelle: {stats['real_reward']:.1f}")
+        
+        print(f"\n🗺️  EXPLORATION:")
+        print(f"   Positions visitées: {stats['visited_positions']}")
+        print(f"   Couverture: {stats['coverage_percentage']:.1f}%")
+        print(f"   Propreté (c_perc): {stats['cleanliness_percentage']:.1f}%")
+        
+        print(f"\n⚙️  SYSTÈME:")
+        print(f"   Updates gaussiens: {stats['gaussian_updates']}")
+        print(f"   Heatmap: μ={stats['heatmap_mean']:.3f}, σ={stats['heatmap_std']:.3f}")
+        print(f"   Bellman: γ={stats['bellman_discount']}")
         
         if stats['minerals_collected'] > 0:
-            print(f"🧪 Concentration moyenne: {stats['avg_mineral_concentration']:.3f}")
-            print(f"📍 Positions minérales: {self.mineral_positions[-5:]}")
+            print(f"\n💎 MINÉRAUX:")
+            print(f"   Concentration moyenne: {stats['avg_mineral_concentration']:.3f}")
+            print(f"   Derniers minéraux: {self.mineral_positions[-3:]}")
         
         print(f"{'='*60}")
     
     def reset_episode(self):
         """Réinitialise pour un nouvel épisode (conserve l'apprentissage)"""
-        # Conserver les minéraux collectés (apprentissage)
+        # Conserver l'apprentissage
         minerals_before = self.minerals_collected
         
-        # Réinitialiser les compteurs d'épisode
+        # Sauvegarder les récompenses
         self.episode_rewards.append(self.total_reward)
+        
+        # Réinitialiser les compteurs d'épisode
         self.total_reward = 0.0
+        self.academic_reward_total = 0.0
+        self.real_reward_total = 0.0
         self.visited_positions.clear()
+        self.cleaned_positions.clear()
         self.unique_positions_count = 0
         self.steps_without_mineral = 0
-        
-        print(f"\n🔄 Robot {self.robot_id}: Nouvel épisode")
-        print(f"   Minéraux collectés (total): {minerals_before}")
-    
-    def get_reward_breakdown(self, step_data):
-        """Retourne la décomposition détaillée des récompenses"""
-        # Implémentation pour debugging
-        pass
-
-
-# ============================================================================
-# 🎯 INTÉGRATION AVEC VOTRE AGENT DQN
-# ============================================================================
-
-class DQNAgentWithRealRewards:
-    """Agent DQN utilisant le système de récompenses réel"""
-    
-    def __init__(self, robot_id=0, grid_size=(100, 100)):
-        self.robot_id = robot_id
-        self.grid_size = grid_size
-        
-        # Initialiser le système de récompenses RÉEL
-        self.reward_system = RealMineralRewardSystem(
-            grid_size=grid_size, 
-            robot_id=robot_id
-        )
-        
-        # Paramètres DQN
-        self.epsilon = 0.18  # Exploration rate
-        self.learning_rate = 0.001
-        self.gamma = 0.99  # Discount factor
-        
-        # Mémoire d'expérience
-        self.memory = []
-        self.batch_size = 32
-        
-        # Statistiques
         self.total_steps = 0
-        self.episode_count = 0
+        self.gaussian_step = 0
         
-        print(f"🤖 Agent {robot_id} initialisé avec récompenses RÉELLES")
+        # Régénérer partiellement la heatmap
+        regeneration = np.random.rand(*self.academic_heatmap.shape) * 0.3
+        self.academic_heatmap = np.minimum(1.0, self.academic_heatmap + regeneration)
+        
+        print(f"\n🔄 Robot {self.robot_id}: Nouvel épisode académique")
+        print(f"   Minéraux collectés (total): {minerals_before}")
+        print(f"   Heatmap régénérée")
     
-    def get_action(self, state):
-        """Sélectionne une action basée sur l'état"""
-        # Exploration vs exploitation
-        if np.random.random() < self.epsilon:
-            # Exploration: action aléatoire
-            return np.random.randint(0, 8)
-        else:
-            # Exploitation: meilleure action selon le modèle
-            # À remplacer par votre modèle DQN
-            return self._predict_best_action(state)
-    
-    def _predict_best_action(self, state):
-        """Prédit la meilleure action (à adapter avec votre modèle)"""
-        # Placeholder - utiliser votre modèle DQN ici
-        return np.random.randint(0, 8)
-    
-    def step(self, state, action, next_state, mineral_concentrations, 
-             position, is_new_position, has_collision):
-        """
-        Exécute un step d'apprentissage
+    def get_reward_breakdown(self, position, concentrations):
+        """Retourne la décomposition détaillée des récompenses"""
+        x, y = position
+        position_key = (int(x), int(y))
         
-        Args:
-            state: État actuel (obs)
-            action: Action prise
-            next_state: État suivant
-            mineral_concentrations: Concentrations MINÉRALES RÉELLES
-            position: Position (x, y)
-            is_new_position: Si nouvelle position
-            has_collision: Si collision
-        """
-        # Calculer la récompense RÉELLE
-        reward = self.reward_system.calculate_reward(
-            mineral_concentrations=mineral_concentrations,
-            position=position,
-            is_new_position=is_new_position,
-            has_collision=has_collision,
-            step_count=self.total_steps
-        )
+        heatmap_value = 0.0
+        if 0 <= y < self.grid_size[0] and 0 <= x < self.grid_size[1]:
+            heatmap_value = self.academic_heatmap[y, x]
         
-        # Stocker l'expérience
-        experience = {
-            'state': state,
-            'action': action,
-            'reward': reward,
-            'next_state': next_state,
-            'done': False
-        }
-        self.memory.append(experience)
+        max_concentration = max(concentrations) if concentrations else 0.0
         
-        # Afficher les minéraux détectés
-        if reward > 50.0:  # Récompense minérale significative
-            print(f"💰 Robot {self.robot_id} à {position}: récompense = {reward:.1f}")
-        
-        # Apprentissage périodique
-        if len(self.memory) >= self.batch_size:
-            self._train_from_memory()
-        
-        self.total_steps += 1
-        
-        # Afficher rapport périodique
-        if self.total_steps % 100 == 0:
-            self.reward_system.print_detailed_report()
-        
-        return reward
-    
-    def _train_from_memory(self):
-        """Entraîne le modèle DQN (à adapter)"""
-        # Implémentez votre logique DQN ici
-        # Utilisez self.memory pour l'apprentissage
-        pass
-    
-    def end_episode(self):
-        """Termine un épisode"""
-        self.episode_count += 1
-        self.reward_system.reset_episode()
-        
-        # Afficher le résumé de l'épisode
-        stats = self.reward_system.get_statistics()
-        print(f"\n📊 ÉPISODE {self.episode_count} TERMINÉ")
-        print(f"   Steps: {self.total_steps}")
-        print(f"   Minéraux: {stats['minerals_collected']}")
-        print(f"   Récompense: {stats['total_reward']:.1f}")
-        
-        # Ajuster epsilon (exploration decay)
-        self.epsilon = max(0.01, self.epsilon * 0.995)
-    
-    def get_mineral_statistics(self):
-        """Retourne les statistiques minérales"""
         return {
-            'robot_id': self.robot_id,
-            'minerals_collected': self.reward_system.minerals_collected,
-            'mineral_positions': self.reward_system.mineral_positions,
-            'concentrations': self.reward_system.concentration_history
+            'position': position_key,
+            'heatmap_value': heatmap_value,
+            'max_concentration': max_concentration,
+            'academic_potential': heatmap_value * self.reward_config['mineral_base_reward'],
+            'real_potential': max_concentration * self.reward_config['mineral_base_reward'],
+            'is_cleaned': position_key in self.cleaned_positions,
+            'is_visited': position_key in self.visited_positions,
+            'gaussian_updates': self.gaussian_step // self.reward_config['gaussian_update_freq']
         }
 
 
 # ============================================================================
-# 🚀 EXEMPLE D'UTILISATION
+# 🎯 INTÉGRATION SIMPLIFIÉE
 # ============================================================================
-
-def simulate_agent_test():
-    """Test de simulation pour vérifier le système"""
-    
-    print("🧪 TEST DU SYSTÈME DE RÉCOMPENSES RÉEL")
-    print("="*50)
-    
-    # Créer l'agent
-    agent = DQNAgentWithRealRewards(robot_id=0)
-    
-    # Simuler quelques steps
-    for step in range(200):
-        # Données simulées (à remplacer par vos vraies données)
-        mineral_concentrations = [0.0]  # Pas de minéral
-        
-        # Simuler occasionnellement un minéral
-        if step == 50:
-            mineral_concentrations = [0.45]  # Premier minéral!
-        elif step == 120:
-            mineral_concentrations = [0.72]  # Second minéral (haute concentration)
-        
-        # Position aléatoire
-        position = (np.random.randint(0, 100), np.random.randint(0, 100))
-        is_new_position = np.random.random() > 0.7
-        has_collision = np.random.random() > 0.95
-        
-        # Exécuter le step
-        reward = agent.step(
-            state=np.random.randn(100, 100, 4),
-            action=np.random.randint(0, 8),
-            next_state=np.random.randn(100, 100, 4),
-            mineral_concentrations=mineral_concentrations,
-            position=position,
-            is_new_position=is_new_position,
-            has_collision=has_collision
-        )
-        
-        if step % 50 == 0:
-            print(f"Step {step}: reward = {reward:.1f}")
-    
-    # Fin de l'épisode
-    agent.end_episode()
-    
-    # Afficher les statistiques finales
-    stats = agent.get_mineral_statistics()
-    print(f"\n✅ TEST TERMINÉ:")
-    print(f"   Minéraux trouvés: {stats['minerals_collected']}")
-    print(f"   Positions: {stats['mineral_positions']}")
-
 
 if __name__ == "__main__":
-    # Exécuter le test
-    simulate_agent_test()
+    # Test du système académique
+    print("🧪 TEST DU SYSTÈME ACADÉMIQUE")
+    print("="*50)
+    
+    # Créer le système
+    reward_system = RealMineralRewardSystem(grid_size=(50, 50), robot_id=0)
+    
+    # Simuler quelques steps
+    for step in range(100):
+        # Données simulées
+        if step % 20 == 0:
+            concentrations = [0.6]  # Minéral occasionnel
+        else:
+            concentrations = [0.05]  # Pas de minéral
+        
+        position = (np.random.randint(0, 50), np.random.randint(0, 50))
+        is_new = np.random.random() > 0.5
+        has_collision = np.random.random() > 0.9
+        
+        # Calculer la récompense
+        reward = reward_system.calculate_reward(
+            mineral_concentrations=concentrations,
+            position=position,
+            is_new_position=is_new,
+            has_collision=has_collision,
+            step_count=step
+        )
+        
+        if step % 25 == 0:
+            print(f"Step {step}: position={position}, reward={reward:.1f}")
+    
+    # Fin de l'épisode
+    reward_system.print_detailed_report()
+    
+    # Afficher les statistiques
+    stats = reward_system.get_statistics()
+    print(f"\n✅ TEST TERMINÉ:")
+    print(f"   Minéraux: {stats['minerals_collected']}")
+    print(f"   Couverture: {stats['coverage_percentage']:.1f}%")
+    print(f"   Propreté: {stats['cleanliness_percentage']:.1f}%")

@@ -5,7 +5,7 @@ Si vous préférez contrôler chaque terminal :
 ### **Terminal 1 - Serveur Principal**
 ```bash
 source ~/ree_exploration_ros2/install/setup.bash
-ros2 run ree_exploration_server server_node
+
 ```
 ### **Terminal 2 - Système IA**
 ```bash

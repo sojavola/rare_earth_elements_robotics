@@ -9,6 +9,11 @@ log/
 data/
 models/
 nootbook/
+logs/
+metrics_logs/
+monitor_logs/
+multi_models/
+
 *.db
 *.sh.env
 *.bash

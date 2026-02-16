@@ -1,0 +1,346 @@
+sojavola@sojavola-HP:/media/sojavola/SOJAVOLA1/STAGE/stage_M2_PRISMALAB/projet/rare_earth_elements_robotics$ ros2 run ree_exploration_agent agent_node 0
+✅ EnhancedDataLogger importé avec succès
+[INFO] [1770068748.490824257] [ree_exploration_agent_0]: 🎯 ROBOT ID DÉFINI: 0
+[INFO] [1770068748.527139384] [ree_exploration_agent_0]: 🧠 Initializing DQN agent...
+🎯 DEBUG: Robot ID reçu = 0, stocké = 0
+🤖 Using device: cpu
+🔧 Robot 0 utilisant son propre modèle DQN
+✅ Robot 0: Model loaded from models/robot_0/latest_model.pth
+   Episode: 0, Steps: 0, ε=1.000
+✅ Robot 0: Model loaded successfully
+🔄 ε adjusted to: 0.700
+🧠 DQN initialized: state_shape=(100, 100, 4), actions=8
+📊 Continuous Learning: ε=0.700, step_count=0
+📊 Logger prêt pour Robot 0
+📁 logs/robot_0
+📊 Logging CSV/Plots activé pour Robot 0
+   📁 Données sauvegardées dans: logs/robot_0/
+🧠 Robot 0 initialisé - ε=0.700
+[INFO] [1770068749.269151694] [ree_exploration_agent_0]: 🧠 DQN initialized: state_shape=(100, 100, 4), actions=8
+[INFO] [1770068749.328967974] [ree_exploration_agent_0]: 🔍 Robot 0 - Vérification modèle partagé...
+[WARN] [1770068749.342435759] [ree_exploration_agent_0]:    ⚠️ Pas de shared_manager détecté
+[INFO] [1770068749.349397200] [ree_exploration_agent_0]: 🚀 DQN Agent Node 0 initialized at position (79, 76)
+[INFO] [1770068754.523210706] [ree_exploration_agent_0]: 🔄 Model sync: Version 1
+[INFO] [1770068769.336348291] [ree_exploration_agent_0]: 📈 Robot 0 - Episode: 0, Steps: 20, EpisodeReward: 10.7, Minerals: 0, ε: 0.700
+[INFO] [1770068784.466076622] [ree_exploration_agent_0]: 🔄 Model sync: Version 2
+[INFO] [1770068789.339312489] [ree_exploration_agent_0]: 📈 Robot 0 - Episode: 0, Steps: 40, EpisodeReward: 14.3, Minerals: 0, ε: 0.700
+[INFO] [1770068809.343823928] [ree_exploration_agent_0]: 📈 Robot 0 - Episode: 0, Steps: 60, EpisodeReward: 16.3, Minerals: 0, ε: 0.700
+[INFO] [1770068815.447440439] [ree_exploration_agent_0]: 🔄 Model sync: Version 3
+[INFO] [1770068829.345405501] [ree_exploration_agent_0]: 📈 Robot 0 - Episode: 0, Steps: 80, EpisodeReward: 18.3, Minerals: 0, ε: 0.700
+[INFO] [1770068845.469272123] [ree_exploration_agent_0]: 🔄 Model sync: Version 4
+[INFO] [1770068849.343940611] [ree_exploration_agent_0]: 📈 Robot 0 - Episode: 0, Steps: 100, EpisodeReward: 20.3, Minerals: 0, ε: 0.700
+[INFO] [1770068869.347012538] [ree_exploration_agent_0]: 📈 Robot 0 - Episode: 0, Steps: 120, EpisodeReward: 23.5, Minerals: 0, ε: 0.700
+[INFO] [1770068875.472136396] [ree_exploration_agent_0]: 🔄 Model sync: Version 5
+[INFO] [1770068889.338007561] [ree_exploration_agent_0]: 📈 Robot 0 - Episode: 0, Steps: 140, EpisodeReward: 24.9, Minerals: 0, ε: 0.700
+[INFO] [1770068906.470597694] [ree_exploration_agent_0]: 🔄 Model sync: Version 6
+[INFO] [1770068909.337887107] [ree_exploration_agent_0]: 📈 Robot 0 - Episode: 0, Steps: 160, EpisodeReward: 26.9, Minerals: 0, ε: 0.700
+[INFO] [1770068929.344445367] [ree_exploration_agent_0]: 📈 Robot 0 - Episode: 0, Steps: 180, EpisodeReward: 28.9, Minerals: 0, ε: 0.700
+[INFO] [1770068936.471693759] [ree_exploration_agent_0]: 🔄 Model sync: Version 7
+[INFO] [1770068949.337425072] [ree_exploration_agent_0]: 📈 Robot 0 - Episode: 0, Steps: 200, EpisodeReward: 32.3, Minerals: 0, ε: 0.700
+[INFO] [1770068966.469934022] [ree_exploration_agent_0]: 🔄 Model sync: Version 8
+[INFO] [1770068969.345798689] [ree_exploration_agent_0]: 📈 Robot 0 - Episode: 0, Steps: 220, EpisodeReward: 36.0, Minerals: 0, ε: 0.700
+[INFO] [1770068989.340017764] [ree_exploration_agent_0]: 📈 Robot 0 - Episode: 0, Steps: 240, EpisodeReward: 14.9, Minerals: 0, ε: 0.700
+[INFO] [1770068996.464275671] [ree_exploration_agent_0]: 🔄 Model sync: Version 9
+[INFO] [1770069005.340359210] [ree_exploration_agent_0]: 📊 Episode 1 completed: Steps=256, Reward=-0.3, Minerals=0, ε=0.700
+[INFO] [1770069005.349760776] [ree_exploration_agent_0]: 🔄 Starting new episode at (16, 33)
+[INFO] [1770069027.467707149] [ree_exploration_agent_0]: 🔄 Model sync: Version 10
+[INFO] [1770069057.476853221] [ree_exploration_agent_0]: 🔄 Model sync: Version 11
+[INFO] [1770069088.465564486] [ree_exploration_agent_0]: 🔄 Model sync: Version 12
+[INFO] [1770069118.463807926] [ree_exploration_agent_0]: 🔄 Model sync: Version 13
+[INFO] [1770069140.335369792] [ree_exploration_agent_0]: 📊 Episode 2 completed: Steps=135, Reward=0.5, Minerals=0, ε=0.700
+[INFO] [1770069140.345658220] [ree_exploration_agent_0]: 🔄 Starting new episode at (56, 24)
+[INFO] [1770069149.462449882] [ree_exploration_agent_0]: 🔄 Model sync: Version 14
+[INFO] [1770069180.466228722] [ree_exploration_agent_0]: 🔄 Model sync: Version 15
+[INFO] [1770069211.473245678] [ree_exploration_agent_0]: 🔄 Model sync: Version 16
+[INFO] [1770069241.473749678] [ree_exploration_agent_0]: 🔄 Model sync: Version 17
+[INFO] [1770069271.463678116] [ree_exploration_agent_0]: 🔄 Model sync: Version 18
+[INFO] [1770069301.464024179] [ree_exploration_agent_0]: 🔄 Model sync: Version 19
+[INFO] [1770069332.464523062] [ree_exploration_agent_0]: 🔄 Model sync: Version 20
+[INFO] [1770069363.462304244] [ree_exploration_agent_0]: 🔄 Model sync: Version 21
+[INFO] [1770069393.473962681] [ree_exploration_agent_0]: 🔄 Model sync: Version 22
+[INFO] [1770069424.461638183] [ree_exploration_agent_0]: 🔄 Model sync: Version 23
+[INFO] [1770069455.458463476] [ree_exploration_agent_0]: 🔄 Model sync: Version 24
+[INFO] [1770069486.487948465] [ree_exploration_agent_0]: 🔄 Model sync: Version 25
+[INFO] [1770069517.461219393] [ree_exploration_agent_0]: 🔄 Model sync: Version 26
+[INFO] [1770069547.463704543] [ree_exploration_agent_0]: 🔄 Model sync: Version 27
+[INFO] [1770069578.463685950] [ree_exploration_agent_0]: 🔄 Model sync: Version 28
+[INFO] [1770069608.461122984] [ree_exploration_agent_0]: 🔄 Model sync: Version 29
+[INFO] [1770069639.473697176] [ree_exploration_agent_0]: 🔄 Model sync: Version 30
+[INFO] [1770069640.334088312] [ree_exploration_agent_0]: 📊 Episode 3 completed: Steps=500, Reward=-1000.0, Minerals=0, ε=0.700
+[INFO] [1770069640.343211243] [ree_exploration_agent_0]: 🔄 Starting new episode at (25, 24)
+[INFO] [1770069670.467074268] [ree_exploration_agent_0]: 🔄 Model sync: Version 31
+[INFO] [1770069700.487893693] [ree_exploration_agent_0]: 🔄 Model sync: Version 32
+[INFO] [1770069731.477731053] [ree_exploration_agent_0]: 🔄 Model sync: Version 33
+[INFO] [1770069761.464540730] [ree_exploration_agent_0]: 🔄 Model sync: Version 34
+[INFO] [1770069792.469161236] [ree_exploration_agent_0]: 🔄 Model sync: Version 35
+[INFO] [1770069822.471681634] [ree_exploration_agent_0]: 🔄 Model sync: Version 36
+[INFO] [1770069852.475062847] [ree_exploration_agent_0]: 🔄 Model sync: Version 37
+[INFO] [1770069883.472393685] [ree_exploration_agent_0]: 🔄 Model sync: Version 38
+[INFO] [1770069913.468678459] [ree_exploration_agent_0]: 🔄 Model sync: Version 39
+[INFO] [1770069943.478774647] [ree_exploration_agent_0]: 🔄 Model sync: Version 40
+[INFO] [1770069974.468022147] [ree_exploration_agent_0]: 🔄 Model sync: Version 41
+[INFO] [1770070004.460517841] [ree_exploration_agent_0]: 🔄 Model sync: Version 42
+[INFO] [1770070035.470332464] [ree_exploration_agent_0]: 🔄 Model sync: Version 43
+[INFO] [1770070066.471549477] [ree_exploration_agent_0]: 🔄 Model sync: Version 44
+[INFO] [1770070096.469972183] [ree_exploration_agent_0]: 🔄 Model sync: Version 45
+[INFO] [1770070126.476630661] [ree_exploration_agent_0]: 🔄 Model sync: Version 46
+[INFO] [1770070140.333772715] [ree_exploration_agent_0]: 📊 Episode 4 completed: Steps=500, Reward=-1000.0, Minerals=0, ε=0.700
+[INFO] [1770070140.342727191] [ree_exploration_agent_0]: 🔄 Starting new episode at (62, 9)
+[INFO] [1770070157.458568639] [ree_exploration_agent_0]: 🔄 Model sync: Version 47
+[INFO] [1770070187.478410522] [ree_exploration_agent_0]: 🔄 Model sync: Version 48
+💾 Robot 0: Model saved: models/robot_0/model_episode_5.pth
+🔁 Robot 0: Latest model updated: models/robot_0/latest_model.pth
+[INFO] [1770070218.931084018] [ree_exploration_agent_0]: 📊 Episode 5 completed: Steps=77, Reward=-7.3, Minerals=0, ε=0.700
+[INFO] [1770070218.942411075] [ree_exploration_agent_0]: 🔄 Starting new episode at (45, 40)
+[INFO] [1770070218.967964512] [ree_exploration_agent_0]: 🔄 Model sync: Version 49
+[INFO] [1770070248.464483592] [ree_exploration_agent_0]: 🔄 Model sync: Version 50
+[INFO] [1770070273.334595303] [ree_exploration_agent_0]: 📊 Episode 6 completed: Steps=56, Reward=-2.6, Minerals=0, ε=0.700
+[INFO] [1770070273.345467203] [ree_exploration_agent_0]: 🔄 Starting new episode at (35, 26)
+[INFO] [1770070278.484475559] [ree_exploration_agent_0]: 🔄 Model sync: Version 51
+[INFO] [1770070309.474160581] [ree_exploration_agent_0]: 🔄 Model sync: Version 52
+[INFO] [1770070340.464439488] [ree_exploration_agent_0]: 🔄 Model sync: Version 53
+[INFO] [1770070370.336299914] [ree_exploration_agent_0]: 📊 Episode 7 completed: Steps=97, Reward=-0.5, Minerals=0, ε=0.700
+[INFO] [1770070370.348452617] [ree_exploration_agent_0]: 🔄 Starting new episode at (5, 18)
+[INFO] [1770070370.463431417] [ree_exploration_agent_0]: 🔄 Model sync: Version 54
+[INFO] [1770070400.490733287] [ree_exploration_agent_0]: 🔄 Model sync: Version 55
+[INFO] [1770070422.335146051] [ree_exploration_agent_0]: 📊 Episode 8 completed: Steps=52, Reward=-4.8, Minerals=0, ε=0.700
+[INFO] [1770070422.346461268] [ree_exploration_agent_0]: 🔄 Starting new episode at (43, 36)
+[INFO] [1770070430.482003533] [ree_exploration_agent_0]: 🔄 Model sync: Version 56
+[INFO] [1770070461.471190929] [ree_exploration_agent_0]: 🔄 Model sync: Version 57
+[INFO] [1770070492.506602301] [ree_exploration_agent_0]: 🔄 Model sync: Version 58
+[INFO] [1770070523.464509373] [ree_exploration_agent_0]: 🔄 Model sync: Version 59
+[INFO] [1770070554.488032521] [ree_exploration_agent_0]: 🔄 Model sync: Version 60
+[INFO] [1770070585.461322283] [ree_exploration_agent_0]: 🔄 Model sync: Version 61
+[INFO] [1770070602.336405031] [ree_exploration_agent_0]: 📊 Episode 9 completed: Steps=180, Reward=-2.0, Minerals=0, ε=0.700
+[INFO] [1770070602.344484871] [ree_exploration_agent_0]: 🔄 Starting new episode at (20, 76)
+[INFO] [1770070615.485891254] [ree_exploration_agent_0]: 🔄 Model sync: Version 62
+[INFO] [1770070646.463190139] [ree_exploration_agent_0]: 🔄 Model sync: Version 63
+[INFO] [1770070677.461441869] [ree_exploration_agent_0]: 🔄 Model sync: Version 64
+[INFO] [1770070708.458857526] [ree_exploration_agent_0]: 🔄 Model sync: Version 65
+[INFO] [1770070739.479762533] [ree_exploration_agent_0]: 🔄 Model sync: Version 66
+💾 Robot 0: Model saved: models/robot_0/model_episode_10.pth
+🔁 Robot 0: Latest model updated: models/robot_0/latest_model.pth
+[INFO] [1770070746.861987949] [ree_exploration_agent_0]: 📊 Episode 10 completed: Steps=143, Reward=-0.2, Minerals=0, ε=0.700
+[INFO] [1770070746.869793544] [ree_exploration_agent_0]: 🔄 Starting new episode at (38, 22)
+[INFO] [1770070770.461723082] [ree_exploration_agent_0]: 🔄 Model sync: Version 67
+[INFO] [1770070801.461157321] [ree_exploration_agent_0]: 🔄 Model sync: Version 68
+[INFO] [1770070831.458886429] [ree_exploration_agent_0]: 🔄 Model sync: Version 69
+[INFO] [1770070851.338134940] [ree_exploration_agent_0]: 📊 Episode 11 completed: Steps=106, Reward=0.9, Minerals=0, ε=0.700
+[INFO] [1770070851.348033245] [ree_exploration_agent_0]: 🔄 Starting new episode at (27, 35)
+[INFO] [1770070862.463324085] [ree_exploration_agent_0]: 🔄 Model sync: Version 70
+[INFO] [1770070893.463891073] [ree_exploration_agent_0]: 🔄 Model sync: Version 71
+[INFO] [1770070903.337192389] [ree_exploration_agent_0]: 📊 Episode 12 completed: Steps=52, Reward=-11.6, Minerals=0, ε=0.700
+[INFO] [1770070903.347513860] [ree_exploration_agent_0]: 🔄 Starting new episode at (23, 41)
+[INFO] [1770070924.461938233] [ree_exploration_agent_0]: 🔄 Model sync: Version 72
+[INFO] [1770070955.461661292] [ree_exploration_agent_0]: 🔄 Model sync: Version 73
+[INFO] [1770070986.464345942] [ree_exploration_agent_0]: 🔄 Model sync: Version 74
+[INFO] [1770071017.459998667] [ree_exploration_agent_0]: 🔄 Model sync: Version 75
+[INFO] [1770071040.337143760] [ree_exploration_agent_0]: 📊 Episode 13 completed: Steps=137, Reward=-0.3, Minerals=0, ε=0.700
+[INFO] [1770071040.346510155] [ree_exploration_agent_0]: 🔄 Starting new episode at (73, 63)
+[INFO] [1770071048.459536480] [ree_exploration_agent_0]: 🔄 Model sync: Version 76
+[INFO] [1770071079.459764420] [ree_exploration_agent_0]: 🔄 Model sync: Version 77
+[INFO] [1770071110.462671825] [ree_exploration_agent_0]: 🔄 Model sync: Version 78
+[INFO] [1770071141.460347798] [ree_exploration_agent_0]: 🔄 Model sync: Version 79
+[INFO] [1770071171.462980664] [ree_exploration_agent_0]: 🔄 Model sync: Version 80
+[INFO] [1770071201.467767380] [ree_exploration_agent_0]: 🔄 Model sync: Version 81
+[INFO] [1770071232.462150402] [ree_exploration_agent_0]: 🔄 Model sync: Version 82
+[INFO] [1770071262.465318375] [ree_exploration_agent_0]: 🔄 Model sync: Version 83
+[INFO] [1770071274.333840626] [ree_exploration_agent_0]: 📊 Episode 14 completed: Steps=234, Reward=-0.3, Minerals=0, ε=0.700
+[INFO] [1770071274.343444297] [ree_exploration_agent_0]: 🔄 Starting new episode at (15, 90)
+[INFO] [1770071274.352809387] [ree_exploration_agent_0]: 📈 Robot 0 - Episode: 14, Steps: 0, EpisodeReward: 0.0, Minerals: 0, ε: 0.700
+[INFO] [1770071293.465308706] [ree_exploration_agent_0]: 🔄 Model sync: Version 84
+[INFO] [1770071294.343822250] [ree_exploration_agent_0]: 📈 Robot 0 - Episode: 14, Steps: 20, EpisodeReward: 3.3, Minerals: 0, ε: 0.700
+[INFO] [1770071314.342177340] [ree_exploration_agent_0]: 📈 Robot 0 - Episode: 14, Steps: 40, EpisodeReward: 5.3, Minerals: 0, ε: 0.700
+[INFO] [1770071323.459767463] [ree_exploration_agent_0]: 🔄 Model sync: Version 85
+[INFO] [1770071334.334392874] [ree_exploration_agent_0]: 📈 Robot 0 - Episode: 14, Steps: 60, EpisodeReward: 7.3, Minerals: 0, ε: 0.700
+[INFO] [1770071354.346593506] [ree_exploration_agent_0]: 📈 Robot 0 - Episode: 14, Steps: 80, EpisodeReward: 9.3, Minerals: 0, ε: 0.700
+[INFO] [1770071354.463522343] [ree_exploration_agent_0]: 🔄 Model sync: Version 86
+[INFO] [1770071374.342252586] [ree_exploration_agent_0]: 📈 Robot 0 - Episode: 14, Steps: 100, EpisodeReward: 12.4, Minerals: 0, ε: 0.700
+[INFO] [1770071384.474121145] [ree_exploration_agent_0]: 🔄 Model sync: Version 87
+[INFO] [1770071394.339764945] [ree_exploration_agent_0]: 📈 Robot 0 - Episode: 14, Steps: 120, EpisodeReward: 12.3, Minerals: 0, ε: 0.700
+[INFO] [1770071414.343483708] [ree_exploration_agent_0]: 📈 Robot 0 - Episode: 14, Steps: 140, EpisodeReward: 14.3, Minerals: 0, ε: 0.700
+[INFO] [1770071415.462975326] [ree_exploration_agent_0]: 🔄 Model sync: Version 88
+[INFO] [1770071434.337678306] [ree_exploration_agent_0]: 📈 Robot 0 - Episode: 14, Steps: 160, EpisodeReward: 16.3, Minerals: 0, ε: 0.700
+[INFO] [1770071446.461495528] [ree_exploration_agent_0]: 🔄 Model sync: Version 89
+[INFO] [1770071454.336530023] [ree_exploration_agent_0]: 📈 Robot 0 - Episode: 14, Steps: 180, EpisodeReward: 18.3, Minerals: 0, ε: 0.700
+[INFO] [1770071474.344224973] [ree_exploration_agent_0]: 📈 Robot 0 - Episode: 14, Steps: 200, EpisodeReward: 20.3, Minerals: 0, ε: 0.700
+[INFO] [1770071476.465928359] [ree_exploration_agent_0]: 🔄 Model sync: Version 90
+[INFO] [1770071494.338002963] [ree_exploration_agent_0]: 📈 Robot 0 - Episode: 14, Steps: 220, EpisodeReward: 23.5, Minerals: 0, ε: 0.700
+[INFO] [1770071507.457721567] [ree_exploration_agent_0]: 🔄 Model sync: Version 91
+[INFO] [1770071514.333948944] [ree_exploration_agent_0]: 📈 Robot 0 - Episode: 14, Steps: 240, EpisodeReward: 25.5, Minerals: 0, ε: 0.700
+[INFO] [1770071534.335171921] [ree_exploration_agent_0]: 📈 Robot 0 - Episode: 14, Steps: 260, EpisodeReward: 28.7, Minerals: 0, ε: 0.700
+[INFO] [1770071538.460874173] [ree_exploration_agent_0]: 🔄 Model sync: Version 92
+[INFO] [1770071554.337178678] [ree_exploration_agent_0]: 📈 Robot 0 - Episode: 14, Steps: 280, EpisodeReward: 32.0, Minerals: 0, ε: 0.700
+[INFO] [1770071569.468544238] [ree_exploration_agent_0]: 🔄 Model sync: Version 93
+[INFO] [1770071574.337087405] [ree_exploration_agent_0]: 📈 Robot 0 - Episode: 14, Steps: 300, EpisodeReward: 25.6, Minerals: 0, ε: 0.700
+[INFO] [1770071594.335625766] [ree_exploration_agent_0]: 📈 Robot 0 - Episode: 14, Steps: 320, EpisodeReward: 4.5, Minerals: 0, ε: 0.700
+[INFO] [1770071599.458311225] [ree_exploration_agent_0]: 🔄 Model sync: Version 94
+💾 Robot 0: Model saved: models/robot_0/model_episode_15.pth
+🔁 Robot 0: Latest model updated: models/robot_0/latest_model.pth
+[INFO] [1770071612.886082198] [ree_exploration_agent_0]: 📊 Episode 15 completed: Steps=337, Reward=-10.6, Minerals=0, ε=0.700
+[INFO] [1770071612.895217598] [ree_exploration_agent_0]: 🔄 Starting new episode at (74, 62)
+[INFO] [1770071629.460882453] [ree_exploration_agent_0]: 🔄 Model sync: Version 95
+[INFO] [1770071660.462731619] [ree_exploration_agent_0]: 🔄 Model sync: Version 96
+[INFO] [1770071691.463647572] [ree_exploration_agent_0]: 🔄 Model sync: Version 97
+[INFO] [1770071721.458375098] [ree_exploration_agent_0]: 🔄 Model sync: Version 98
+[INFO] [1770071752.467995490] [ree_exploration_agent_0]: 🔄 Model sync: Version 99
+[INFO] [1770071783.480449803] [ree_exploration_agent_0]: 🔄 Model sync: Version 100
+[INFO] [1770071813.462623216] [ree_exploration_agent_0]: 🔄 Model sync: Version 101
+[INFO] [1770071818.338117724] [ree_exploration_agent_0]: 📊 Episode 16 completed: Steps=207, Reward=-2.8, Minerals=0, ε=0.700
+[INFO] [1770071818.349086358] [ree_exploration_agent_0]: 🔄 Starting new episode at (33, 31)
+[INFO] [1770071844.480572121] [ree_exploration_agent_0]: 🔄 Model sync: Version 102
+[INFO] [1770071875.465328033] [ree_exploration_agent_0]: 🔄 Model sync: Version 103
+[INFO] [1770071905.459025791] [ree_exploration_agent_0]: 🔄 Model sync: Version 104
+[INFO] [1770071935.466041059] [ree_exploration_agent_0]: 🔄 Model sync: Version 105
+[INFO] [1770071959.336138226] [ree_exploration_agent_0]: 📊 Episode 17 completed: Steps=141, Reward=-1.6, Minerals=0, ε=0.700
+[INFO] [1770071959.346798416] [ree_exploration_agent_0]: 🔄 Starting new episode at (85, 38)
+[INFO] [1770071959.358349064] [ree_exploration_agent_0]: 📈 Robot 0 - Episode: 17, Steps: 0, EpisodeReward: 0.0, Minerals: 0, ε: 0.700
+[INFO] [1770071966.459158296] [ree_exploration_agent_0]: 🔄 Model sync: Version 106
+[INFO] [1770071979.337487267] [ree_exploration_agent_0]: 📈 Robot 0 - Episode: 17, Steps: 20, EpisodeReward: 2.0, Minerals: 0, ε: 0.700
+[INFO] [1770071996.477371489] [ree_exploration_agent_0]: 🔄 Model sync: Version 107
+[INFO] [1770071999.344531579] [ree_exploration_agent_0]: 📈 Robot 0 - Episode: 17, Steps: 40, EpisodeReward: 4.0, Minerals: 0, ε: 0.700
+[INFO] [1770072019.337972806] [ree_exploration_agent_0]: 📈 Robot 0 - Episode: 17, Steps: 60, EpisodeReward: 6.0, Minerals: 0, ε: 0.700
+[INFO] [1770072027.462249488] [ree_exploration_agent_0]: 🔄 Model sync: Version 108
+[INFO] [1770072039.352428564] [ree_exploration_agent_0]: 📈 Robot 0 - Episode: 17, Steps: 80, EpisodeReward: 8.0, Minerals: 0, ε: 0.700
+[INFO] [1770072057.457860311] [ree_exploration_agent_0]: 🔄 Model sync: Version 109
+[INFO] [1770072059.333147229] [ree_exploration_agent_0]: 📈 Robot 0 - Episode: 17, Steps: 100, EpisodeReward: 7.9, Minerals: 0, ε: 0.700
+[INFO] [1770072079.334477523] [ree_exploration_agent_0]: 📈 Robot 0 - Episode: 17, Steps: 120, EpisodeReward: 5.7, Minerals: 0, ε: 0.700
+[INFO] [1770072087.473115137] [ree_exploration_agent_0]: 🔄 Model sync: Version 110
+[INFO] [1770072097.337856005] [ree_exploration_agent_0]: 📊 Episode 18 completed: Steps=138, Reward=-5.1, Minerals=0, ε=0.700
+[INFO] [1770072097.349513053] [ree_exploration_agent_0]: 🔄 Starting new episode at (69, 40)
+[INFO] [1770072118.469449503] [ree_exploration_agent_0]: 🔄 Model sync: Version 111
+[INFO] [1770072148.475051804] [ree_exploration_agent_0]: 🔄 Model sync: Version 112
+[INFO] [1770072179.457733296] [ree_exploration_agent_0]: 🔄 Model sync: Version 113
+[INFO] [1770072210.480395736] [ree_exploration_agent_0]: 🔄 Model sync: Version 114
+[INFO] [1770072241.458951398] [ree_exploration_agent_0]: 🔄 Model sync: Version 115
+[INFO] [1770072263.336123628] [ree_exploration_agent_0]: 📊 Episode 19 completed: Steps=166, Reward=-4.4, Minerals=0, ε=0.700
+[INFO] [1770072263.344677975] [ree_exploration_agent_0]: 🔄 Starting new episode at (93, 32)
+[INFO] [1770072271.517698343] [ree_exploration_agent_0]: 🔄 Model sync: Version 116
+[INFO] [1770072302.463367411] [ree_exploration_agent_0]: 🔄 Model sync: Version 117
+[INFO] [1770072333.461052004] [ree_exploration_agent_0]: 🔄 Model sync: Version 118
+[INFO] [1770072363.459556264] [ree_exploration_agent_0]: 🔄 Model sync: Version 119
+[INFO] [1770072393.364071155] [ree_exploration_agent_0]: Saved logs to data/training/robot_0.csv
+💾 Robot 0: Model saved: models/robot_0/model_episode_20.pth
+🔁 Robot 0: Latest model updated: models/robot_0/latest_model.pth
+[INFO] [1770072394.974084086] [ree_exploration_agent_0]: 📊 Episode 20 completed: Steps=130, Reward=-5.2, Minerals=0, ε=0.700
+[INFO] [1770072394.984739489] [ree_exploration_agent_0]: 🔄 Starting new episode at (75, 15)
+[INFO] [1770072395.004797333] [ree_exploration_agent_0]: 🔄 Model sync: Version 120
+[INFO] [1770072424.498658853] [ree_exploration_agent_0]: 🔄 Model sync: Version 121
+[INFO] [1770072445.334402157] [ree_exploration_agent_0]: 📊 Episode 21 completed: Steps=52, Reward=-3.2, Minerals=0, ε=0.700
+[INFO] [1770072445.345385136] [ree_exploration_agent_0]: 🔄 Starting new episode at (80, 12)
+[INFO] [1770072455.457715258] [ree_exploration_agent_0]: 🔄 Model sync: Version 122
+[INFO] [1770072485.484816239] [ree_exploration_agent_0]: 🔄 Model sync: Version 123
+[INFO] [1770072516.469920418] [ree_exploration_agent_0]: 🔄 Model sync: Version 124
+[INFO] [1770072532.336798008] [ree_exploration_agent_0]: 📊 Episode 22 completed: Steps=87, Reward=-8.1, Minerals=0, ε=0.700
+[INFO] [1770072532.347814263] [ree_exploration_agent_0]: 🔄 Starting new episode at (65, 6)
+[INFO] [1770072547.459834366] [ree_exploration_agent_0]: 🔄 Model sync: Version 125
+[INFO] [1770072577.457807143] [ree_exploration_agent_0]: 🔄 Model sync: Version 126
+[INFO] [1770072586.337529526] [ree_exploration_agent_0]: 📊 Episode 23 completed: Steps=54, Reward=-51.3, Minerals=0, ε=0.700
+[INFO] [1770072586.348827491] [ree_exploration_agent_0]: 🔄 Starting new episode at (48, 69)
+[INFO] [1770072608.466208386] [ree_exploration_agent_0]: 🔄 Model sync: Version 127
+[INFO] [1770072639.466798471] [ree_exploration_agent_0]: 🔄 Model sync: Version 128
+[INFO] [1770072670.469833149] [ree_exploration_agent_0]: 🔄 Model sync: Version 129
+[INFO] [1770072696.334364862] [ree_exploration_agent_0]: 📊 Episode 24 completed: Steps=110, Reward=-5.7, Minerals=0, ε=0.700
+[INFO] [1770072696.344501813] [ree_exploration_agent_0]: 🔄 Starting new episode at (14, 52)
+[INFO] [1770072700.461075203] [ree_exploration_agent_0]: 🔄 Model sync: Version 130
+[INFO] [1770072731.461272522] [ree_exploration_agent_0]: 🔄 Model sync: Version 131
+[INFO] [1770072762.488940718] [ree_exploration_agent_0]: 🔄 Model sync: Version 132
+[INFO] [1770072793.465516334] [ree_exploration_agent_0]: 🔄 Model sync: Version 133
+[INFO] [1770072823.462972618] [ree_exploration_agent_0]: 🔄 Model sync: Version 134
+💾 Robot 0: Model saved: models/robot_0/model_episode_25.pth
+🔁 Robot 0: Latest model updated: models/robot_0/latest_model.pth
+[INFO] [1770072845.868848303] [ree_exploration_agent_0]: 📊 Episode 25 completed: Steps=148, Reward=-0.1, Minerals=0, ε=0.700
+[INFO] [1770072845.880089079] [ree_exploration_agent_0]: 🔄 Starting new episode at (32, 43)
+[INFO] [1770072845.890672434] [ree_exploration_agent_0]: 📈 Robot 0 - Episode: 25, Steps: 0, EpisodeReward: 0.0, Minerals: 0, ε: 0.700
+[INFO] [1770072854.457348359] [ree_exploration_agent_0]: 🔄 Model sync: Version 135
+[INFO] [1770072864.344669352] [ree_exploration_agent_0]: 📈 Robot 0 - Episode: 25, Steps: 20, EpisodeReward: 3.3, Minerals: 0, ε: 0.700
+[INFO] [1770072884.338233972] [ree_exploration_agent_0]: 📈 Robot 0 - Episode: 25, Steps: 40, EpisodeReward: 5.3, Minerals: 0, ε: 0.700
+[INFO] [1770072885.468109265] [ree_exploration_agent_0]: 🔄 Model sync: Version 136
+[INFO] [1770072904.335238587] [ree_exploration_agent_0]: 📈 Robot 0 - Episode: 25, Steps: 60, EpisodeReward: 7.3, Minerals: 0, ε: 0.700
+[INFO] [1770072915.465557641] [ree_exploration_agent_0]: 🔄 Model sync: Version 137
+[INFO] [1770072924.344328537] [ree_exploration_agent_0]: 📈 Robot 0 - Episode: 25, Steps: 80, EpisodeReward: 9.3, Minerals: 0, ε: 0.700
+[INFO] [1770072944.338430134] [ree_exploration_agent_0]: 📈 Robot 0 - Episode: 25, Steps: 100, EpisodeReward: 11.3, Minerals: 0, ε: 0.700
+[INFO] [1770072946.460187745] [ree_exploration_agent_0]: 🔄 Model sync: Version 138
+[INFO] [1770072964.338789256] [ree_exploration_agent_0]: 📈 Robot 0 - Episode: 25, Steps: 120, EpisodeReward: 13.3, Minerals: 0, ε: 0.700
+[INFO] [1770072976.512895610] [ree_exploration_agent_0]: 🔄 Model sync: Version 139
+[INFO] [1770072984.345832144] [ree_exploration_agent_0]: 📈 Robot 0 - Episode: 25, Steps: 140, EpisodeReward: 15.3, Minerals: 0, ε: 0.700
+[INFO] [1770073004.338443082] [ree_exploration_agent_0]: 📈 Robot 0 - Episode: 25, Steps: 160, EpisodeReward: 17.3, Minerals: 0, ε: 0.700
+[INFO] [1770073007.467828720] [ree_exploration_agent_0]: 🔄 Model sync: Version 140
+[INFO] [1770073024.338340220] [ree_exploration_agent_0]: 📈 Robot 0 - Episode: 25, Steps: 180, EpisodeReward: 4.6, Minerals: 0, ε: 0.700
+[INFO] [1770073038.465633935] [ree_exploration_agent_0]: 🔄 Model sync: Version 141
+[INFO] [1770073044.346847942] [ree_exploration_agent_0]: 📈 Robot 0 - Episode: 25, Steps: 200, EpisodeReward: 6.6, Minerals: 0, ε: 0.700
+[INFO] [1770073055.336968370] [ree_exploration_agent_0]: 📊 Episode 26 completed: Steps=211, Reward=-4.9, Minerals=0, ε=0.700
+[INFO] [1770073055.349365773] [ree_exploration_agent_0]: 🔄 Starting new episode at (68, 51)
+[INFO] [1770073068.468035417] [ree_exploration_agent_0]: 🔄 Model sync: Version 142
+[INFO] [1770073099.458619571] [ree_exploration_agent_0]: 🔄 Model sync: Version 143
+[INFO] [1770073130.471247711] [ree_exploration_agent_0]: 🔄 Model sync: Version 144
+[INFO] [1770073161.487524614] [ree_exploration_agent_0]: 🔄 Model sync: Version 145
+[INFO] [1770073191.338149389] [ree_exploration_agent_0]: 📊 Episode 27 completed: Steps=136, Reward=-1.5, Minerals=0, ε=0.700
+[INFO] [1770073191.348648713] [ree_exploration_agent_0]: 🔄 Starting new episode at (15, 21)
+[INFO] [1770073192.491495718] [ree_exploration_agent_0]: 🔄 Model sync: Version 146
+[INFO] [1770073223.471629811] [ree_exploration_agent_0]: 🔄 Model sync: Version 147
+[INFO] [1770073243.338513312] [ree_exploration_agent_0]: 📊 Episode 28 completed: Steps=52, Reward=-7.4, Minerals=0, ε=0.700
+[INFO] [1770073243.353551478] [ree_exploration_agent_0]: 🔄 Starting new episode at (43, 41)
+[INFO] [1770073254.461639247] [ree_exploration_agent_0]: 🔄 Model sync: Version 148
+[INFO] [1770073285.472036037] [ree_exploration_agent_0]: 🔄 Model sync: Version 149
+[INFO] [1770073316.460049691] [ree_exploration_agent_0]: 🔄 Model sync: Version 150
+[INFO] [1770073346.470219911] [ree_exploration_agent_0]: 🔄 Model sync: Version 151
+[INFO] [1770073377.464074324] [ree_exploration_agent_0]: 🔄 Model sync: Version 152
+[INFO] [1770073407.463183332] [ree_exploration_agent_0]: 🔄 Model sync: Version 153
+[INFO] [1770073428.336416835] [ree_exploration_agent_0]: 📊 Episode 29 completed: Steps=185, Reward=0.8, Minerals=0, ε=0.700
+[INFO] [1770073428.347124572] [ree_exploration_agent_0]: 🔄 Starting new episode at (74, 34)
+[INFO] [1770073438.475440192] [ree_exploration_agent_0]: 🔄 Model sync: Version 154
+[INFO] [1770073469.465054216] [ree_exploration_agent_0]: 🔄 Model sync: Version 155
+[INFO] [1770073500.468601806] [ree_exploration_agent_0]: 🔄 Model sync: Version 156
+[INFO] [1770073531.457162733] [ree_exploration_agent_0]: 🔄 Model sync: Version 157
+[INFO] [1770073561.472719630] [ree_exploration_agent_0]: 🔄 Model sync: Version 158
+💾 Robot 0: Model saved: models/robot_0/model_episode_30.pth
+🔁 Robot 0: Latest model updated: models/robot_0/latest_model.pth
+[INFO] [1770073569.925093259] [ree_exploration_agent_0]: 📊 Episode 30 completed: Steps=140, Reward=-4.9, Minerals=0, ε=0.700
+[INFO] [1770073569.935935112] [ree_exploration_agent_0]: 🔄 Starting new episode at (51, 74)
+[INFO] [1770073592.461675789] [ree_exploration_agent_0]: 🔄 Model sync: Version 159
+[INFO] [1770073620.349757542] [ree_exploration_agent_0]: 📊 Episode 31 completed: Steps=52, Reward=1.1, Minerals=0, ε=0.700
+[INFO] [1770073620.359689909] [ree_exploration_agent_0]: 🔄 Starting new episode at (41, 86)
+[INFO] [1770073622.476068049] [ree_exploration_agent_0]: 🔄 Model sync: Version 160
+[INFO] [1770073653.460593474] [ree_exploration_agent_0]: 🔄 Model sync: Version 161
+[INFO] [1770073672.335265528] [ree_exploration_agent_0]: 📊 Episode 32 completed: Steps=52, Reward=0.9, Minerals=0, ε=0.700
+[INFO] [1770073672.344534304] [ree_exploration_agent_0]: 🔄 Starting new episode at (56, 48)
+[INFO] [1770073683.461829623] [ree_exploration_agent_0]: 🔄 Model sync: Version 162
+[INFO] [1770073714.460987482] [ree_exploration_agent_0]: 🔄 Model sync: Version 163
+[INFO] [1770073724.335664789] [ree_exploration_agent_0]: 📊 Episode 33 completed: Steps=52, Reward=-27.6, Minerals=0, ε=0.700
+[INFO] [1770073724.344230968] [ree_exploration_agent_0]: 🔄 Starting new episode at (6, 30)
+[INFO] [1770073724.353442492] [ree_exploration_agent_0]: 📈 Robot 0 - Episode: 33, Steps: 0, EpisodeReward: 0.0, Minerals: 0, ε: 0.700
+[INFO] [1770073744.343545250] [ree_exploration_agent_0]: 📈 Robot 0 - Episode: 33, Steps: 20, EpisodeReward: 3.5, Minerals: 0, ε: 0.700
+[INFO] [1770073744.460366874] [ree_exploration_agent_0]: 🔄 Model sync: Version 164
+[INFO] [1770073764.338606165] [ree_exploration_agent_0]: 📈 Robot 0 - Episode: 33, Steps: 40, EpisodeReward: 5.5, Minerals: 0, ε: 0.700
+[INFO] [1770073775.462211866] [ree_exploration_agent_0]: 🔄 Model sync: Version 165
+[INFO] [1770073784.333433483] [ree_exploration_agent_0]: 📈 Robot 0 - Episode: 33, Steps: 60, EpisodeReward: 5.4, Minerals: 0, ε: 0.700
+[INFO] [1770073793.338043664] [ree_exploration_agent_0]: 📊 Episode 34 completed: Steps=69, Reward=-4.2, Minerals=0, ε=0.700
+[INFO] [1770073793.347119178] [ree_exploration_agent_0]: 🔄 Starting new episode at (25, 64)
+[INFO] [1770073805.460485758] [ree_exploration_agent_0]: 🔄 Model sync: Version 166
+[INFO] [1770073836.465216651] [ree_exploration_agent_0]: 🔄 Model sync: Version 167
+[INFO] [1770073866.470823632] [ree_exploration_agent_0]: 🔄 Model sync: Version 168
+[INFO] [1770073897.489634537] [ree_exploration_agent_0]: 🔄 Model sync: Version 169
+[INFO] [1770073928.471393556] [ree_exploration_agent_0]: 🔄 Model sync: Version 170
+[INFO] [1770073959.464710243] [ree_exploration_agent_0]: 🔄 Model sync: Version 171
+💾 Robot 0: Model saved: models/robot_0/model_episode_35.pth
+🔁 Robot 0: Latest model updated: models/robot_0/latest_model.pth
+[INFO] [1770073976.122147550] [ree_exploration_agent_0]: 📊 Episode 35 completed: Steps=181, Reward=-3.7, Minerals=0, ε=0.700
+[INFO] [1770073976.143960890] [ree_exploration_agent_0]: 🔄 Starting new episode at (19, 44)
+[INFO] [1770073976.155189189] [ree_exploration_agent_0]: 📈 Robot 0 - Episode: 35, Steps: 0, EpisodeReward: 0.0, Minerals: 0, ε: 0.700
+[INFO] [1770073989.474776505] [ree_exploration_agent_0]: 🔄 Model sync: Version 172
+[INFO] [1770073994.340795448] [ree_exploration_agent_0]: 📈 Robot 0 - Episode: 35, Steps: 20, EpisodeReward: 2.0, Minerals: 0, ε: 0.700
+[INFO] [1770074014.347281809] [ree_exploration_agent_0]: 📈 Robot 0 - Episode: 35, Steps: 40, EpisodeReward: 4.0, Minerals: 0, ε: 0.700
+[INFO] [1770074020.470470517] [ree_exploration_agent_0]: 🔄 Model sync: Version 173
+[INFO] [1770074034.354485463] [ree_exploration_agent_0]: 📈 Robot 0 - Episode: 35, Steps: 60, EpisodeReward: 1.8, Minerals: 0, ε: 0.700
+[INFO] [1770074050.466286947] [ree_exploration_agent_0]: 🔄 Model sync: Version 174
+[INFO] [1770074054.335150636] [ree_exploration_agent_0]: 📈 Robot 0 - Episode: 35, Steps: 80, EpisodeReward: 1.7, Minerals: 0, ε: 0.700
+[INFO] [1770074060.337165145] [ree_exploration_agent_0]: 📊 Episode 36 completed: Steps=86, Reward=-1.9, Minerals=0, ε=0.700
+[INFO] [1770074060.349519689] [ree_exploration_agent_0]: 🔄 Starting new episode at (75, 10)
+[INFO] [1770074081.463309123] [ree_exploration_agent_0]: 🔄 Model sync: Version 175
+[INFO] [1770074111.463724432] [ree_exploration_agent_0]: 🔄 Model sync: Version 176
+[INFO] [1770074112.333444729] [ree_exploration_agent_0]: 📊 Episode 37 completed: Steps=52, Reward=-13.5, Minerals=0, ε=0.700
+[INFO] [1770074112.342153554] [ree_exploration_agent_0]: 🔄 Starting new episode at (89, 74)
+[INFO] [1770074141.459203093] [ree_exploration_agent_0]: 🔄 Model sync: Version 177
+[INFO] [1770074172.472250310] [ree_exploration_agent_0]: 🔄 Model sync: Version 178
+[INFO] [1770074203.461615865] [ree_exploration_agent_0]: 🔄 Model sync: Version 179
