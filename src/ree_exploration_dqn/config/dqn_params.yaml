@@ -1,0 +1,40 @@
+# DQN hyperparameters — single source of truth for ree_exploration_dqn.
+# Loaded at node startup via ROS2 parameter server.
+# Override any value with: --ros-args -p <param>:=<value>
+#
+# Per-robot paths are computed at runtime: base_dir/robot_{id}/
+# robot_id is injected by the launch file (0–3), default 0.
+
+/dqn_agent:
+  ros__parameters:
+    robot_id: 0
+    decision_hz: 1.0
+
+/dqn_trainer:
+  ros__parameters:
+    robot_id: 0
+
+    # Bellman update — article Table 1: do not change without updating algorithm
+    learning_rate: 0.00025      # Adam
+    gamma: 0.99
+
+    # Epsilon-greedy — article Table 1: linear decay ε -= 9e-7 per training step
+    epsilon_start: 1.0
+    epsilon_min: 0.05
+    epsilon_decay: 0.000000900  # 9e-7 (linear, per step) — article Table 1
+
+    # Replay buffer — article Table 1
+    memory_size: 10000          # 10^4
+    batch_size: 32
+
+    # Target network hard-update — article Table 1: every 10^4 training steps
+    target_update_freq: 10000
+
+    # Gradient clipping
+    grad_clip_norm: 10.0
+
+    # Watchdog: warn if no experience arrives within this window (seconds)
+    watchdog_timeout_sec: 30.0
+
+    # Broadcast updated weights to agent every N training steps
+    weight_broadcast_freq: 50

@@ -1,54 +1,12 @@
-## 🎮 **COMMANDES MANUELLES (Alternative)**
+# Terminal 1 — serveur
+ros2 run ree_exploration_server server_node
 
-Si vous préférez contrôler chaque terminal :
+# Terminal 2 — 4 agents DQN
+ros2 launch ree_exploration_dqn ree_dqn_multi.launch.py
 
-### **Terminal 1 - Serveur Principal**
-```bash
-source ~/ree_exploration_ros2/install/setup.bash
+# Terminal 3 — visualisation RViz2
+ros2 launch ree_exploration_viz visualization.launch.py
 
-```
-### **Terminal 2 - Système IA**
-```bash
-source ~/ree_exploration_ros2/install/setup.bash
-ros2 run generative_ai_layer science_ai_system
-```
-### **Terminal 3 - Coordinateur**
-```bash
-source ~/ree_exploration_ros2/install/setup.bash
-ros2 run ree_exploration_agent multi_agent_coordinator
-```
-### **Terminal 4-7 - Robots (4 terminaux)**
-```bash
-# Terminal 4 - Robot 0
-source ~/ree_exploration_ros2/install/setup.bash
-ros2 run ree_exploration_agent agent_node 0
-# Terminal 5 - Robot 1  
-source ~/ree_exploration_ros2/install/setup.bash
-ros2 run ree_exploration_agent agent_node 1
-# Terminal 6 - Robot 2
-source ~/ree_exploration_ros2/install/setup.bash
-ros2 run ree_exploration_agent agent_node 2
-# Terminal 7 - Robot 3
-source ~/ree_exploration_ros2/install/setup.bash
-ros2 run ree_exploration_agent agent_node 3
-``
-### **Terminal 8 - Classificateur**
-```bash
-source ~/ree_exploration_ros2/install/setup.bash
-ros2 run spectral_classifier spectral_classifier_node
+# Terminal 4 — TensorBoard
+tensorboard --logdir tensorboard_logs/dqn
 
-```
-### **Terminal 9 - Monitoring**
-```bash
-source ~/ree_exploration_ros2/install/setup.bash
-./start_dashboard.sh
-```
-
-Foxglove - moniteur en ligne.
-ros2 launch foxglove_bridge foxglove_bridge_launch.xml 
-
-ros2 run ree_mineral_detector mineral_detector_node
-
-# Les deux nodes peuvent tourner ensemble
-ros2 run ree_visualization foxglove_viz_node &
-ros2 run ree_visualization mineral_detector_node
