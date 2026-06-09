@@ -77,16 +77,26 @@ class DQNTrainerNode(Node):
         self._declare_params()
         self._load_params()
         self._init_dirs()
-        self._init_networks()
-        self._init_buffer()
-        self._init_logging()
-        self._init_episode_state()
 
+        # These must be initialised BEFORE _init_networks so that
+        # _load_checkpoint() can overwrite them with checkpoint values.
+        # Placing them after _init_networks causes checkpoint values to be
+        # silently overwritten — the root cause of episode/step reset on resume.
         self._shutdown_event = threading.Event()
         self._last_exp_time = time.monotonic()
         self._step_count: int = 0
         self._ep_count: int = 0
         self._current_ep: int = -1
+
+        # Try-locks: prevent two concurrent background threads from writing to
+        # the same .tmp file (causes gzip / pickle corruption on next load).
+        self._checkpoint_saving = threading.Lock()
+        self._buffer_saving     = threading.Lock()
+
+        self._init_networks()   # may overwrite _step_count/_ep_count from checkpoint
+        self._init_buffer()
+        self._init_logging()
+        self._init_episode_state()
 
         exp_topic = _T.AGENT_EXPERIENCE_FMT.format(id=self._robot_id)
         weight_topic = _T.WEIGHT_UPDATE_FMT.format(id=self._robot_id)
@@ -106,7 +116,10 @@ class DQNTrainerNode(Node):
         )
         self._train_thread.start()
 
+        # Handle both SIGTERM (from ROS2 launch) and SIGINT (Ctrl+C) the same
+        # way so the checkpoint + buffer are always saved on shutdown.
         signal.signal(signal.SIGTERM, self._sigterm_handler)
+        signal.signal(signal.SIGINT,  self._sigterm_handler)
 
         self.get_logger().info(f'{self._tag} {self._buffer}')
         self.get_logger().info(
@@ -140,7 +153,7 @@ class DQNTrainerNode(Node):
         self.declare_parameter('memory_size',        _N.MEMORY_SIZE)
         self.declare_parameter('batch_size',         _N.BATCH_SIZE)
         self.declare_parameter('target_update_freq', _N.TARGET_UPDATE_FREQ)
-        self.declare_parameter('grad_clip_norm',     10.0)
+        self.declare_parameter('grad_clip_norm',     1.0)
         self.declare_parameter('watchdog_timeout_sec', _N.WATCHDOG_TIMEOUT_SEC)
         self.declare_parameter('weight_broadcast_freq', _N.WEIGHT_BROADCAST_FREQ)
 
@@ -173,10 +186,21 @@ class DQNTrainerNode(Node):
     # ------------------------------------------------------------------ #
 
     def _init_dirs(self) -> None:
+        # Convert to absolute paths so background threads work regardless of CWD.
+        self._model_dir   = os.path.abspath(self._model_dir)
+        self._tb_log_dir  = os.path.abspath(self._tb_log_dir)
+        self._csv_log_dir = os.path.abspath(self._csv_log_dir)
+        self._buffer_path = os.path.abspath(self._buffer_path)
         for d in (self._model_dir, self._tb_log_dir, self._csv_log_dir):
             os.makedirs(d, exist_ok=True)
 
     def _init_networks(self) -> None:
+        # Limit PyTorch to 1 OS thread per process.  Without this, each trainer
+        # spawns N_cores threads for matmul, and 4 trainers × N_cores threads
+        # saturate all CPU cores — agent timer callbacks can't get scheduled.
+        torch.set_num_threads(1)
+        torch.set_num_interop_threads(1)
+
         self._device = torch.device(
             'cuda' if torch.cuda.is_available() else 'cpu'
         )
@@ -243,12 +267,15 @@ class DQNTrainerNode(Node):
         try:
             p = json.loads(msg.data)
             shape = tuple(p['obs_shape'])
-            obs = np.frombuffer(
-                base64.b64decode(p['obs']), dtype=np.float16
-            ).reshape(shape).astype(np.float32)
-            next_obs = np.frombuffer(
-                base64.b64decode(p['next_obs']), dtype=np.float16
-            ).reshape(shape).astype(np.float32)
+            compressed = p.get('compressed', False)
+            if compressed:
+                obs_bytes      = zlib.decompress(base64.b64decode(p['obs']))
+                next_obs_bytes = zlib.decompress(base64.b64decode(p['next_obs']))
+            else:
+                obs_bytes      = base64.b64decode(p['obs'])
+                next_obs_bytes = base64.b64decode(p['next_obs'])
+            obs = np.frombuffer(obs_bytes, dtype=np.float16).reshape(shape).astype(np.float32)
+            next_obs = np.frombuffer(next_obs_bytes, dtype=np.float16).reshape(shape).astype(np.float32)
             pos      = np.array(p.get('pos',      [0, 0]), dtype=np.float32)
             next_pos = np.array(p.get('next_pos', [0, 0]), dtype=np.float32)
 
@@ -330,9 +357,14 @@ class DQNTrainerNode(Node):
 
     def _training_loop(self) -> None:
         self.get_logger().info(f'{self._tag} Training thread started')
+        # With torch.set_num_threads(1) each CNN step takes ~4-8 s on CPU.
+        # Sleep 1 s after each step so the OS scheduler has a guaranteed window
+        # to run agent timer callbacks on the same core (time-slicing).
+        _TRAIN_INTERVAL = 1.0
+
         while not self._shutdown_event.is_set():
             if len(self._buffer) < self._batch_size:
-                time.sleep(0.05)
+                self._shutdown_event.wait(timeout=0.05)
                 continue
 
             batch = self._buffer.sample(self._batch_size)
@@ -353,6 +385,10 @@ class DQNTrainerNode(Node):
             if self._step_count % self._weight_bcast_freq == 0:
                 self._broadcast_weights()
                 self._publish_epsilon()
+
+            # Yield CPU so the agent's 10-Hz decision timer fires on schedule.
+            # Uses Event.wait() so SIGTERM is never delayed by this sleep.
+            self._shutdown_event.wait(timeout=_TRAIN_INTERVAL)
 
     def _train_step(self, batch: Tuple) -> Tuple[float, float]:
         """One Bellman gradient update (DQN).
@@ -414,7 +450,7 @@ class DQNTrainerNode(Node):
             )
 
     def _log_train_step(self, loss: float, grad_norm: float) -> None:
-        if self._tb is None:
+        if self._tb is None or self._step_count % 100 != 0:
             return
         s = self._step_count
         self._tb.add_scalar('Train/Loss',     loss,      s)
@@ -426,7 +462,11 @@ class DQNTrainerNode(Node):
     # ------------------------------------------------------------------ #
 
     def _broadcast_weights(self) -> None:
-        """Serialize policy_net → zlib compress → base64 → publish String."""
+        """Serialize policy_net + epsilon → zlib compress → JSON → publish.
+
+        Payload: JSON {"eps": float, "w": base64-zlib-state_dict}
+        The agent unpacks epsilon to stay in sync without an extra topic.
+        """
         try:
             buf = BytesIO()
             with self._net_lock:
@@ -434,7 +474,8 @@ class DQNTrainerNode(Node):
             compressed = zlib.compress(buf.getvalue(), level=1)
             encoded    = base64.b64encode(compressed).decode('ascii')
             msg      = String()
-            msg.data = encoded
+            msg.data = json.dumps({'eps': self._epsilon, 'w': encoded},
+                                  separators=(',', ':'))
             self._weight_pub.publish(msg)
         except Exception as exc:
             self.get_logger().warning(
@@ -451,7 +492,11 @@ class DQNTrainerNode(Node):
     # ------------------------------------------------------------------ #
 
     def _save_checkpoint(self) -> None:
-        """Atomically save policy_net, target_net, optimizer, and counters."""
+        """Atomically save policy_net, target_net, optimizer, and counters.
+
+        Also writes epsilon.json so the agent can restore its epsilon on startup
+        without waiting for a weight broadcast.
+        """
         path = os.path.join(self._model_dir, 'latest.pt')
         tmp  = path + '.tmp'
         with self._net_lock:
@@ -465,6 +510,18 @@ class DQNTrainerNode(Node):
             }
         torch.save(payload, tmp)
         os.replace(tmp, path)
+
+        # Epsilon+episode file — read by the agent on startup for sync
+        eps_path = os.path.join(self._model_dir, 'epsilon.json')
+        eps_tmp  = eps_path + '.tmp'
+        with open(eps_tmp, 'w') as f:
+            json.dump({
+                'epsilon': self._epsilon,
+                'step':    self._step_count,
+                'episode': self._ep_count,
+            }, f)
+        os.replace(eps_tmp, eps_path)
+
         self.get_logger().info(
             f'{self._tag} Checkpoint saved — '
             f'ep={self._ep_count} step={self._step_count} '
@@ -500,8 +557,35 @@ class DQNTrainerNode(Node):
             )
 
     def _periodic_checkpoint(self) -> None:
-        if self._step_count > 0:
+        """Spawn background saves, but only if the previous save has finished.
+
+        Without the try-locks, a slow torch.save() can still be running when
+        the next 60-s timer fires.  Both threads would write to the same .tmp
+        file, producing a corrupt (truncated or interleaved) gzip archive on
+        the next restart.
+        """
+        if self._step_count == 0:
+            return
+        if self._checkpoint_saving.acquire(blocking=False):
+            threading.Thread(
+                target=self._checkpoint_save_thread, daemon=True
+            ).start()
+        if self._buffer_saving.acquire(blocking=False):
+            threading.Thread(
+                target=self._buffer_save_thread, daemon=True
+            ).start()
+
+    def _checkpoint_save_thread(self) -> None:
+        try:
             self._save_checkpoint()
+        finally:
+            self._checkpoint_saving.release()
+
+    def _buffer_save_thread(self) -> None:
+        try:
+            self._buffer.save(self._buffer_path)
+        finally:
+            self._buffer_saving.release()
 
     # ------------------------------------------------------------------ #
     #  WATCHDOG                                                            #
@@ -520,12 +604,22 @@ class DQNTrainerNode(Node):
     # ------------------------------------------------------------------ #
 
     def _sigterm_handler(self, signum, frame) -> None:
+        sig_name = 'SIGTERM' if signum != signal.SIGINT else 'SIGINT'
         self.get_logger().info(
-            f'{self._tag} SIGTERM — saving checkpoint + buffer'
+            f'{self._tag} {sig_name} — saving checkpoint + buffer'
         )
         self._shutdown_event.set()
-        self._save_checkpoint()
-        self._buffer.save(self._buffer_path)
+        # Blocking acquire: wait until any in-progress background save finishes.
+        # This prevents a race where the background thread and the shutdown save
+        # both write to the same .tmp file simultaneously.
+        self._checkpoint_saving.acquire(blocking=True)
+        self._buffer_saving.acquire(blocking=True)
+        try:
+            self._save_checkpoint()
+            self._buffer.save(self._buffer_path)
+        finally:
+            self._checkpoint_saving.release()
+            self._buffer_saving.release()
         self.destroy_node()
         rclpy.shutdown()
         sys.exit(0)

@@ -20,6 +20,7 @@ SIGTERM triggers a clean shutdown.
 
 import base64
 import json
+import os
 import re
 import signal
 import sys
@@ -105,13 +106,17 @@ class DQNAgentNode(Node):
         self._epsilon: float = _N.EPSILON_START
 
         self._step: int = 0          # steps within current episode
-        self._episode: int = 0
         self._ep_reward: float = 0.0
         self._ep_minerals: int = 0
         self._reward_system = RealMineralRewardSystem(
             grid_size=(_N.MAP_HEIGHT, _N.MAP_WIDTH),
             robot_id=self.robot_id,
         )
+        # Restore epsilon and episode counter from trainer checkpoint so the
+        # agent log shows the global episode number, not the session-local one.
+        saved = self._load_training_state_from_disk()
+        self._epsilon: float = saved['epsilon']
+        self._episode: int   = saved['episode']
 
     def _init_network(self) -> None:
         self._device = torch.device(
@@ -171,6 +176,7 @@ class DQNAgentNode(Node):
 
     def _register_sigterm(self) -> None:
         signal.signal(signal.SIGTERM, self._sigterm_handler)
+        signal.signal(signal.SIGINT,  self._sigterm_handler)
 
     # ------------------------------------------------------------------ #
     #  MAIN STEP (Algorithm 1, Caccavale et al.)                          #
@@ -326,6 +332,61 @@ class DQNAgentNode(Node):
     #  HELPERS                                                             #
     # ------------------------------------------------------------------ #
 
+    def _load_training_state_from_disk(self) -> dict:
+        """Restore epsilon and episode count from trainer's saved state.
+
+        Strategy:
+          1. epsilon.json  → fast, written every 60 s by trainer
+          2. latest.pt     → fallback for episode when epsilon.json predates
+                             the episode field (older checkpoints)
+        """
+        base = os.path.join(_N.MODEL_BASE_DIR, f'robot_{self.robot_id}')
+        result = {'epsilon': _N.EPSILON_START, 'episode': 0}
+
+        # Step 1 — epsilon.json
+        try:
+            with open(os.path.join(base, 'epsilon.json')) as f:
+                data = json.load(f)
+            result['epsilon'] = float(data.get('epsilon', _N.EPSILON_START))
+            if 'episode' in data:
+                result['episode'] = int(data['episode'])
+        except Exception:
+            pass
+
+        # Step 2 — fall back to checkpoint for episode (handles old files)
+        if result['episode'] == 0:
+            try:
+                ckpt = torch.load(
+                    os.path.join(base, 'latest.pt'),
+                    map_location='cpu',
+                    weights_only=True,
+                )
+                result['episode'] = int(ckpt.get('episode_count', 0))
+            except Exception:
+                pass
+
+        # Step 3 — last resort: last row of episodes.csv
+        if result['episode'] == 0:
+            try:
+                import csv as _csv
+                csv_path = os.path.join(
+                    _N.CSV_BASE_DIR, f'robot_{self.robot_id}', 'episodes.csv'
+                )
+                last_ep = 0
+                with open(csv_path, newline='') as f:
+                    for row in _csv.reader(f):
+                        if row and row[0].isdigit():
+                            last_ep = int(row[0])
+                result['episode'] = last_ep
+            except Exception:
+                pass
+
+        self.get_logger().info(
+            f'[DQN_AGENT_{self.robot_id}] '
+            f'Restored from disk — ep={result["episode"]} eps={result["epsilon"]:.4f}'
+        )
+        return result
+
     def _is_valid(self, x: int, y: int) -> bool:
         with self._map_lock:
             if not (0 <= x < _N.MAP_WIDTH and 0 <= y < _N.MAP_HEIGHT):
@@ -355,9 +416,22 @@ class DQNAgentNode(Node):
                 )
 
     def _weight_cb(self, msg: String) -> None:
-        """Decompress weights from THIS robot's trainer and apply locally."""
+        """Decompress weights from THIS robot's trainer and apply locally.
+
+        Payload is JSON {"eps": float, "w": base64-zlib-state_dict}.
+        Epsilon is unpacked to keep agent and trainer in sync at all times.
+        """
         try:
-            compressed = base64.b64decode(msg.data.encode('ascii'))
+            data = json.loads(msg.data)
+            if isinstance(data, dict) and 'w' in data:
+                # New format: epsilon + weights bundled together
+                self._epsilon = float(data['eps'])
+                encoded = data['w']
+            else:
+                # Legacy format: raw base64 only (backward compat)
+                encoded = msg.data
+
+            compressed = base64.b64decode(encoded.encode('ascii'))
             raw = zlib.decompress(compressed)
             state_dict = torch.load(
                 BytesIO(raw), map_location=self._device, weights_only=True
@@ -382,21 +456,25 @@ class DQNAgentNode(Node):
         next_obs: np.ndarray,
         done: bool,
     ) -> None:
-        """JSON + base64 float16 — routed to THIS robot's trainer only."""
+        """JSON + base64 zlib-float16 — routed to THIS robot's trainer only.
+
+        Observations are zlib-compressed (level 1) before base64 encoding.
+        Typical savings: ~320 KB → ~90 KB per message, reducing DDS traffic 3-4×.
+        The trainer detects the 'compressed' flag and decompresses accordingly.
+        """
+        obs_bytes      = zlib.compress(obs.astype(np.float16).tobytes(), 1)
+        next_obs_bytes = zlib.compress(next_obs.astype(np.float16).tobytes(), 1)
         payload = {
-            'robot_id': self.robot_id,
-            'obs': base64.b64encode(
-                obs.astype(np.float16).tobytes()
-            ).decode('ascii'),
-            'obs_shape': list(obs.shape),
-            'next_obs': base64.b64encode(
-                next_obs.astype(np.float16).tobytes()
-            ).decode('ascii'),
-            'action': int(action),
-            'reward': float(reward),
-            'done': bool(done),
-            'ep': self._episode,
-            'step': self._step,
+            'robot_id':   self.robot_id,
+            'obs':        base64.b64encode(obs_bytes).decode('ascii'),
+            'obs_shape':  list(obs.shape),
+            'next_obs':   base64.b64encode(next_obs_bytes).decode('ascii'),
+            'compressed': True,
+            'action':     int(action),
+            'reward':     float(reward),
+            'done':       bool(done),
+            'ep':         self._episode,
+            'step':       self._step,
         }
         msg = String()
         msg.data = json.dumps(payload, separators=(',', ':'))
